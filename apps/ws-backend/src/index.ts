@@ -3,10 +3,13 @@ import WebSocket, { WebSocketServer } from 'ws';
 
 const server = http.createServer();
 
-const io = new WebSocket.Server({server});
+const wss = new WebSocketServer({server});
 
-io.on('connection', (socket : WebSocketServer) => {
-    console.log(`Client connected: ${socket}`);
+wss.on('connection', (ws) => {
+    
+    ws.on("message", function message(data) {
+        ws.send("pong");
+    })
 });
 
 server.listen(8080);

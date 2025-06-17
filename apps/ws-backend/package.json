@@ -13,11 +13,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@repo/typescript-config": "workspace:*",
     "http": "0.0.1-security",
     "ws": "^8.18.2"
   },
   "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
     "@types/ws": "^8.18.1"
   }
 }
