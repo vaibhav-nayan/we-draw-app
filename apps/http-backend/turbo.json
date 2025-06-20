@@ -1,5 +1,5 @@
 {
-  "extends": ["//"],
+  "extends": ["../../turbo.json"],
   "pipeline": {
     "build": {
       "outputs": ["dist/**"]

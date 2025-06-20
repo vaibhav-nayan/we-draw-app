@@ -8,7 +8,7 @@ app.use('/api', Router);
 
 
 app.get('/', (req, res) => {
-    res.send('Hello World!')
+    res.send('Server online!')
 })
 
 app.listen(3001, () => {
