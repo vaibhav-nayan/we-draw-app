@@ -6,7 +6,7 @@ import prisma from "@repo/db/client"
 import bcrypt from 'bcrypt'
 
 export const signup = async (req : Request, res: Response) =>{
-
+    // console.log(req.body)
     const parsedData = CreateUserSchema.safeParse(req.body);
     if(!parsedData.success) {
         res.json({
@@ -14,20 +14,25 @@ export const signup = async (req : Request, res: Response) =>{
         })
         return;
     }
+    // console.log(parsedData)
     try {
         const userPassword = parsedData.data.password;
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = bcrypt.hash(userPassword, salt);
+        const hashedPassword = await bcrypt.hash(userPassword, salt);
 
         const user = await prisma.user.create({
             data: {
                 email : parsedData.data.email,
                 password : hashedPassword,
                 name : parsedData.data.name,
-                avatar : parsedData.data?.avatar
+                avatar: parsedData.data.avatar || ""
             }
         })
+        console.log(user)
         req.userId = user.id;
+        res.json({
+            message: "User created Successfully!"
+        })
     }
     catch (error) {
         res.status(409).json({message: "User already exists"});
@@ -71,6 +76,6 @@ export const signin = async (req : Request, res: Response) =>{
     }, JWT_SECRET);
 
     const jwtToken = "Bearer " + token
-
+    req.headers.authorization = jwtToken;
     res.json({jwtToken})
 }
