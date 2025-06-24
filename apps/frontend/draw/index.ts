@@ -1,71 +1,236 @@
 import axios from "axios";
 import { BACKEND_URL } from "@repo/common/config";
 
-type Shape = {
-    type: "rect";
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-} | {
-    type : "circle";
-    centreX : number;
-    centreY : number;
-    radius: number;
-};
 
-export const drawInit = (canvas : HTMLCanvasElement) =>{
+type existingShape = {
+    type: "RECT" | "CIRCLE" | "LINE";
+    rect?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
+    circle?: {
+        x: number;
+        y: number;
+        radius: number;
+    };
+    line?: {
+        x1: number;
+        y1: number;
+        x2: number;
+        y2: number;
+    };
+}
 
-    const existingShapes : Shape[] = [];
+
+export const drawInit = async (canvas : HTMLCanvasElement, roomId : string, socket: WebSocket, getTool: () => string) : Promise<() => void> =>{
+
+    const existingShapes : existingShape[] = await getExistingShapes({roomId});
     const ctx = canvas.getContext('2d');
 
-    if(!ctx) return;
-    ctx.fillStyle = 'rgb(15, 15, 15)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if(!ctx) return () =>{};
+    console.log(getTool())
+    socket.onmessage = (event) =>{
+        const message = JSON.parse(event.data);
+        if(message.type === "draw"){
+            const parsedShape = JSON.parse(message.message)
+            const shape = parsedShape.shape;
+            if (shape.type === "RECT") {
+                existingShapes.push({
+                    type: "RECT",
+                    rect: {
+                        x: shape.x,
+                        y: shape.y,
+                        width: shape.width,
+                        height: shape.height
+                    }
+                });
+            } else if (shape.type === "CIRCLE") {
+                existingShapes.push({
+                    type: "CIRCLE",
+                    circle: {
+                        x: shape.x,
+                        y: shape.y,
+                        radius: shape.radius
+                    }
+                });
+            } else if (shape.type === "LINE") {
+                existingShapes.push({
+                    type: "LINE",
+                    line: {
+                        x1: shape.x1,
+                        y1: shape.y1,
+                        x2: shape.x2,
+                        y2: shape.y2
+                    }
+                });
+            }
+            clearCanvas(existingShapes, ctx, canvas);
+            // edge case: if i am drawing and someone adds a shape, my drawing will be gone for a sec
+        }
+    }
+
+    clearCanvas(existingShapes, ctx, canvas);
 
     let clicked = false;
     let startX = 0;
     let startY = 0;
 
-    canvas.addEventListener('mousedown', (e) =>{
+    const mouseDownHandler = (e : MouseEvent) => {
         clicked = true;
-        startX = (e.clientX)
-        startY = (e.clientY)
-    })
+        startX = e.clientX;
+        startY = e.clientY;
+    }
 
-    canvas.addEventListener('mousemove', (e) =>{
+    const mouseMoveHandler = (e : MouseEvent) =>{
         if(clicked){
             const width = e.clientX - startX;
             const height = e.clientY - startY;
             clearCanvas(existingShapes, ctx, canvas);
             ctx.strokeStyle = 'white';
-            ctx.strokeRect(startX, startY, width, height);
+            switch (getTool()) {
+                case 'RECT':
+                    ctx.strokeRect(startX, startY, width, height);
+                    break;
+                case 'CIRCLE':
+                    ctx.beginPath();
+                    ctx.arc(startX + width / 2, startY + height / 2, Math.abs(width) / 2, 0, 2 * Math.PI);
+                    ctx.stroke();
+                    break;
+                case 'LINE':
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(e.clientX, e.clientY);
+                    ctx.stroke();
+                    break;
+                default:
+                    
+                    break;
+            }
         }
-    })
+    }
 
-    canvas.addEventListener('mouseup', (e) =>{
+    const mouseUpHandler = (e: MouseEvent) =>{
         clicked = false;
         const width = e.clientX - startX;
         const height = e.clientY - startY;
-        existingShapes.push({
-            type: "rect",
-            x: startX,
-            y: startY,
-            width: width,
-            height: height
-        })
-    })
+        if(getTool() === 'RECT'){
+            const data = JSON.stringify({
+                type: "draw",
+                message: JSON.stringify({
+                    shape : {
+                        type: "RECT",
+                        x: startX,
+                        y: startY,
+                        width: width,
+                        height: height
+                    }
+                }),
+                roomId: roomId
+            })
+            socket.send(data)
+            existingShapes.push({
+                type: "RECT",
+                rect: {
+                    x: startX,
+                    y: startY,
+                    width: width,
+                    height: height
+                }
+            })
+        }else if (getTool() === 'CIRCLE'){
+            const data = JSON.stringify({
+                type: "draw",
+                message: JSON.stringify({
+                    shape : {
+                        type: "CIRCLE",
+                        x: startX + width / 2,
+                        y: startY + height / 2,
+                        radius: Math.abs(width) / 2
+                    }
+                }),
+                roomId: roomId
+            })
+            socket.send(data)
+            existingShapes.push({
+                type: "CIRCLE",
+                circle: {
+                    x: startX + width / 2,
+                    y: startY + height / 2,
+                    radius: Math.abs(width) / 2
+                }
+            })}
+        else if (getTool() === 'LINE'){
+            const data = JSON.stringify({
+                type: "draw",
+                message: JSON.stringify({
+                    shape : {
+                        type: "LINE",
+                        x1: startX,
+                        y1: startY,
+                        x2: e.clientX,
+                        y2: e.clientY
+                    }
+                }),
+                roomId: roomId
+            })
+            socket.send(data)
+            existingShapes.push({
+                type: "LINE",
+                line: {
+                    x1: startX,
+                    y1: startY,
+                    x2: e.clientX,
+                    y2: e.clientY
+                }
+            })
+        }else {
+            return;
+        }
+        clearCanvas(existingShapes, ctx, canvas)
+    }
+
+    canvas.addEventListener('mousedown', mouseDownHandler);
+
+    canvas.addEventListener('mousemove', mouseMoveHandler)
+
+    canvas.addEventListener('mouseup', mouseUpHandler)
+
+    return () => {
+        canvas.removeEventListener('mousedown', mouseDownHandler);
+        canvas.removeEventListener('mousemove', mouseMoveHandler);
+        canvas.removeEventListener('mouseup', mouseUpHandler);
+    };
 }
 
-function clearCanvas(existingShapes: Shape[], ctx: CanvasRenderingContext2D ,canvas : HTMLCanvasElement){
+function clearCanvas(existingShapes: existingShape[], ctx: CanvasRenderingContext2D ,canvas : HTMLCanvasElement){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'rgb(15, 15, 15)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     existingShapes.forEach(shape =>{
-        if(shape.type === "rect"){
-            ctx.strokeStyle = 'white';
-            ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+        ctx.strokeStyle = 'white';
+        switch (shape.type) {
+            case "RECT":
+                if(shape.rect === undefined) break;
+                ctx.strokeRect(shape.rect.x, shape.rect.y, shape.rect.width, shape.rect.height);
+                break;
+            case "CIRCLE":
+                if(shape.circle === undefined) break;
+                ctx.beginPath()
+                ctx.arc(shape.circle.x, shape.circle.y, Math.abs(shape.circle.radius), 0 , 2 * Math.PI);
+                ctx.stroke();
+                break;
+            case "LINE":
+                if(shape.line === undefined) break;
+                ctx.beginPath();
+                ctx.moveTo(shape.line.x1, shape.line.y1);
+                ctx.lineTo(shape.line.x2, shape.line.y2);
+                ctx.stroke();
+                break;
+            default:
+                break;
         }
     })
 }
@@ -73,6 +238,13 @@ function clearCanvas(existingShapes: Shape[], ctx: CanvasRenderingContext2D ,can
 async function getExistingShapes ({roomId} : {
     roomId : string
 }) {
-    const res = await axios.get(`${BACKEND_URL}/chats/${roomId}`);
-    
+    const res = await axios.get(`${BACKEND_URL}/shape/${roomId}`, {
+        headers: {
+            "Authorization" : localStorage.getItem('token')
+        }
+    });
+    const messages = res.data.shapes;
+    console.log("Existing Shapes fetched")
+    console.log(messages)
+    return messages;
 }

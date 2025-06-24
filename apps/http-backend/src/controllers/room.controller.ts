@@ -23,7 +23,27 @@ export const createRoom = async (req : Request, res: Response) =>{
         })
 
         res.json({
-            roomId : room.id
+            room
+        })
+    } catch (e) {
+        res.status(411).json({
+            message: "Room already exists with the same name!!"
+        })
+    }
+}
+
+export const deleteRoom = async (req : Request, res: Response) =>{
+
+    const roomId = req.params.roomId;
+    try {
+        await prisma.room.delete({
+            where: {
+                id : parseInt(roomId!)
+            }
+        })
+
+        res.json({
+            message: "Room deleted successfully!!"
         })
     } catch (e) {
         res.status(411).json({
@@ -40,6 +60,26 @@ export const getRooms = async (req : Request, res: Response) =>{
         const rooms = await prisma.room.findMany({
             where: {
                 adminId : userId
+            }
+        })
+
+        res.json({
+            rooms
+        })
+    } catch (e) {
+        res.status(411).json({
+            message: "Could not get Rooms"
+        })
+    }
+}
+
+export const getRoom = async (req : Request, res: Response) =>{
+
+    const roomId = req.userId;
+    try {
+        const rooms = await prisma.room.findMany({
+            where: {
+                id : parseInt(roomId!)
             }
         })
 

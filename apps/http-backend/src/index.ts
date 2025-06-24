@@ -1,6 +1,9 @@
 import express from 'express';
 import  Router  from './routes/index'
 import cors from 'cors';
+import {PORT} from '@repo/backend-common/config'
+
+const port = PORT || 8000;
 
 const app = express();
 
@@ -13,6 +16,6 @@ app.get('/', (req, res) => {
     res.send('Server online!')
 })
 
-app.listen(3001, () => {
-    console.log("Server running on port 3001")
+app.listen(port, () => {
+    console.log("Server running on port : ", port)
 })

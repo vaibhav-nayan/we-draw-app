@@ -69,26 +69,66 @@ wss.on('connection', (ws, request) => {
             user.rooms = user?.rooms.filter(x =>x !== parsedData.room)
         }
 
-        if(parsedData.type === "chat"){
-            const room = parsedData.roomId;
-            const message = parsedData.message;
-
+        if(parsedData.type === "draw"){
+            const roomId = parsedData.roomId;
+            const parsedShape = JSON.parse(parsedData.message);
+            const shape = parsedShape.shape;
             //check about message long, slangy, etc.
+            console.log("parsedData.message is this")
+            console.log(parsedData.message)
+            console.log("parsedShape is this")
+            console.log(parsedShape)
+            console.log("This is the shape object")
+            console.log(shape)
 
-            await prisma.chat.create({
+            await prisma.shape.create({
                 data: {
                     userId: userId,
-                    message: message,
-                    roomId: room
+                    roomId: parseInt(roomId),
+                    type: shape.type,
+                    ...(shape.type === "RECT" && {
+                    rect: {
+                        create: {
+                        x: shape.x,
+                        y: shape.y,
+                        width: shape.width,
+                        height: shape.height
+                        }
+                    }
+                    }),
+                    ...(shape.type === "CIRCLE" && {
+                    circle: {
+                        create: {
+                        x: shape.x,
+                        y: shape.y,
+                        radius: shape.radius
+                        }
+                    }
+                    }),
+                    ...(shape.type === "LINE" && {
+                    line: {
+                        create: {
+                        x1: shape.x1,
+                        y1: shape.y1,
+                        x2: shape.x2,
+                        y2: shape.y2
+                        }
+                    }
+                    })
+                },
+                include: {
+                    rect: true,
+                    circle: true,
+                    line: true
                 }
             })
 
             users.forEach(user =>{
-                if(user.rooms.includes(room)){
+                if(user.rooms.includes(roomId)){
                     user.ws.send(JSON.stringify({
-                        type: "chat",
-                        message: message,
-                        roomId: room
+                        type: "draw",
+                        message: parsedData.message,
+                        roomId: roomId
                     }))
                 }
             })
