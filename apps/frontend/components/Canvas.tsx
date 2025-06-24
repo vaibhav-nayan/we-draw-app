@@ -4,7 +4,9 @@ import useSize from "@/hooks/useSize";
 import { useEffect, useRef, useState } from "react";
 import { Square, Circle, Minus, MousePointer2 } from "lucide-react";
 import { IconWrap } from "./IconWrap";
+import { Game } from "@/draw/Game";
 
+export type ToolType = "PTR" | "RECT" | "CIRCLE" | "LINE";
 
 export function Canvas ({roomId, socket} : {
     roomId : string,
@@ -12,31 +14,43 @@ export function Canvas ({roomId, socket} : {
 }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const windowSize = useSize();
-    const [tool, setTool] = useState('');
+    const [game, setGame] = useState<Game | null>(null);
+    const [tool, setTool] = useState<ToolType>('PTR');
 
-    const toolRef = useRef(tool);
+    // OLD METHOD
+    // const toolRef = useRef(tool);
+    // useEffect(() => {
+    //     toolRef.current = tool;
+    // }, [tool]);
+
+    // const getTool = () => toolRef.current;
+
     useEffect(() => {
-        toolRef.current = tool;
-    }, [tool]);
+        game?.setTool(tool);
+    }, [tool, game])
 
-    const getTool = () => toolRef.current;
     useEffect(() =>{
         if(!canvasRef.current) return;
         const canvas = canvasRef.current;
 
-        let cleanup : () => void;
-        const setup = async () =>{
-            await drawInit(canvas, roomId, socket, getTool).then(fn => {
-                cleanup = fn;
-            });
-        }
-        setup();
-        
-        // better way is to make a class of this, and expose a select Shape function
+        // OLD METHOD
+        // let cleanup : () => void;
+        // const setup = async () =>{
+        //     await drawInit(canvas, roomId, socket, getTool).then(fn => {
+        //         cleanup = fn;
+        //     });
+        // }
+        // setup();
+        // return () =>{
+        //     if (cleanup) cleanup();
+        // }
+
+        const g = new Game(canvas, roomId, socket);
+        setGame(g);
         return () =>{
-            if(cleanup) cleanup();
+            g.destroy();
         }
-    }, [canvasRef, windowSize, tool])
+    }, [canvasRef, windowSize])
 
     return (
     <div className="relative h-screen bg-neutral-900 overflow-hidden">
@@ -46,7 +60,7 @@ export function Canvas ({roomId, socket} : {
             <IconWrap icon={<Circle size={20}/>} active={tool === 'CIRCLE'} onClick={() => setTool('CIRCLE')}/>
             <IconWrap icon={<Minus size={20}/>} active={tool === 'LINE'} onClick={() => setTool('LINE')}/>
         </ToolBar>
-        <canvas className="" ref={canvasRef} width={windowSize[0]} height={windowSize[1]}></canvas>
+        <canvas className={`${tool==='PTR'?'cursor-grab': 'cursor-crosshair'}`} ref={canvasRef} width={windowSize[0]} height={windowSize[1]}></canvas>
     </div>
     )
 }
