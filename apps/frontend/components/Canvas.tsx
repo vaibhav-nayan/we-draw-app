@@ -2,11 +2,11 @@
 import { drawInit } from "@/draw";
 import useSize from "@/hooks/useSize";
 import { useEffect, useRef, useState } from "react";
-import { Square, Circle, Minus, MousePointer2 } from "lucide-react";
+import { Square, Circle, Minus, MousePointer2, Hand } from "lucide-react";
 import { IconWrap } from "./IconWrap";
 import { Game } from "@/draw/Game";
 
-export type ToolType = "PTR" | "RECT" | "CIRCLE" | "LINE";
+export type ToolType = "PTR" | "RECT" | "CIRCLE" | "LINE" | "SELECT";
 
 export function Canvas ({roomId, socket} : {
     roomId : string,
@@ -55,7 +55,8 @@ export function Canvas ({roomId, socket} : {
     return (
     <div className="relative h-screen bg-neutral-900 overflow-hidden">
         <ToolBar>
-            <IconWrap icon={<MousePointer2 size={20}/>} active={tool === 'PTR'} onClick={() => setTool('PTR')}/>
+            <IconWrap icon={<MousePointer2 size={20}/>} active={tool === 'SELECT'} onClick={() => setTool('SELECT')}/>
+            <IconWrap icon={<Hand size={20}/>} active={tool === 'PTR'} onClick={() => setTool('PTR')}/>
             <IconWrap icon={<Square size={20}/>} active={tool === 'RECT'} onClick={() => setTool('RECT')}/>
             <IconWrap icon={<Circle size={20}/>} active={tool === 'CIRCLE'} onClick={() => setTool('CIRCLE')}/>
             <IconWrap icon={<Minus size={20}/>} active={tool === 'LINE'} onClick={() => setTool('LINE')}/>
@@ -74,8 +75,7 @@ function ToolBar ({
 }) {
     return (
         <div className={`z-50 absolute top-2 left-1/2 transform -translate-x-1/2 flex 
-        justify-center items-center gap-4 bg-neutral-800 rounded-2xl text-md py-2 px-8 text-white
-        shadow-2xl shadow-neutral-950 ${className}`}>
+        justify-center items-center gap-4 bg-neutral-800 rounded-2xl text-md py-2 px-8 text-white ${className}`}>
             {children}
         </div>
     )
