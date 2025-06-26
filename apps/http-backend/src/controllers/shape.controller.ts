@@ -17,13 +17,17 @@ export const getShapes = async (req : Request, res: Response) =>{
             include: {
                 rect: true,
                 circle: true,
-                line: true
+                line: true,
+                pencil: {
+                    include : {points : true}
+                }
             }
         })
         // console.log(shapes)
         const shapes = rawShapes.map(shape => {
         if (shape.type === "RECT" && shape.rect) {
             return {
+            id: shape.id,
             type: "RECT",
             rect: {
                 x: shape.rect.x,
@@ -34,6 +38,7 @@ export const getShapes = async (req : Request, res: Response) =>{
             };
         } else if (shape.type === "CIRCLE" && shape.circle) {
             return {
+            id: shape.id,
             type: "CIRCLE",
             circle: {
                 x: shape.circle.x,
@@ -43,6 +48,7 @@ export const getShapes = async (req : Request, res: Response) =>{
             };
         } else if (shape.type === "LINE" && shape.line) {
             return {
+            id: shape.id,
             type: "LINE",
             line: {
                 x1: shape.line.x1,
@@ -51,6 +57,15 @@ export const getShapes = async (req : Request, res: Response) =>{
                 y2: shape.line.y2
             }
             };
+        }
+        else if (shape.type === "PENCIL" && shape.pencil) {
+            return {
+                id: shape.id,
+                type : "PENCIL",
+                pencil : {
+                    points : shape.pencil.points
+                }
+            }
         }
         return null; // in case of invalid shape
         }).filter(Boolean); // remove nulls

@@ -15,13 +15,13 @@ datasource db {
 }
 
 model User {
-  id       String   @id @default(uuid())
+  id       String  @id @default(uuid())
   email    String
   password String
   name     String
   avatar   String
   rooms    Room[]
-  shapes    Shape[]
+  shapes   Shape[]
 }
 
 model Room {
@@ -30,7 +30,7 @@ model Room {
   createdAt DateTime @default(now())
   adminId   String
   admin     User     @relation(fields: [adminId], references: [id])
-  shapes     Shape[]
+  shapes    Shape[]
 }
 
 model Shape {
@@ -44,16 +44,18 @@ model Shape {
   rect   Rect?   @relation()
   circle Circle? @relation()
   line   Line?   @relation()
+  pencil Pencil? @relation()
 }
 
 enum ShapeType {
   RECT
   CIRCLE
   LINE
+  PENCIL
 }
 
 model Rect {
-  rectId Int    @id @default(autoincrement())
+  rectId Int   @id @default(autoincrement())
   x      Int
   y      Int
   width  Int
@@ -62,7 +64,7 @@ model Rect {
 }
 
 model Circle {
-  circleId Int    @id @default(autoincrement())
+  circleId Int   @id @default(autoincrement())
   x        Int
   y        Int
   radius   Int
@@ -70,10 +72,25 @@ model Circle {
 }
 
 model Line {
-  lineId Int    @id @default(autoincrement())
+  lineId Int   @id @default(autoincrement())
   x1     Int
   y1     Int
   x2     Int
   y2     Int
   shape  Shape @relation(fields: [lineId], references: [id], onDelete: Cascade)
+}
+
+model Pencil {
+  pencilShapeId  Int             @id @default(autoincrement())
+  points    Point[]
+  shape     Shape           @relation(fields: [pencilShapeId], references: [id], onDelete: Cascade)
+}
+
+model Point {
+  pointId Int    @id @default(autoincrement())
+  x       Float
+  y       Float
+  order   Int
+  pencilId  Int
+  pencil  Pencil @relation(fields: [pencilId], references: [pencilShapeId], onDelete: Cascade)
 }

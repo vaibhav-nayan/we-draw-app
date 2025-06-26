@@ -81,6 +81,7 @@ wss.on('connection', (ws, request) => {
             console.log("This is the shape object")
             console.log(shape)
 
+
             await prisma.shape.create({
                 data: {
                     userId: userId,
@@ -114,12 +115,32 @@ wss.on('connection', (ws, request) => {
                             y2: shape.line.y2
                             }
                         }
+                    }),
+                    ...(shape.type === "PENCIL" && {
+                        pencil: {
+                            create: {
+                                points: {
+                                    createMany: {
+                                    data: (shape.pencil.points as {x:number, y:number}[]).map((point, idx) => ({
+                                        x: point.x,
+                                        y: point.y,
+                                        order: idx
+                                    }))
+                                    }
+                                }
+                            }
+                        }
                     })
                 },
                 include: {
                     rect: true,
                     circle: true,
-                    line: true
+                    line: true,
+                    pencil: {
+                        include  :{
+                            points : true
+                        }
+                    }
                 }
             })
 
@@ -132,6 +153,39 @@ wss.on('connection', (ws, request) => {
                     }))
                 }
             })
+        }
+
+        else if(parsedData.type === "delete"){
+            const roomId = parsedData.roomId;
+            // console.log("on delete logs")
+            // console.log(roomId)
+            // console.log(parsedData)
+            // console.log(parsedData.message)
+            const shapeId = parsedData.message;
+            
+            // console.log(shapeId)
+
+            try {
+                await prisma.shape.delete({
+                    where: {
+                        id: shapeId
+                    }
+                })
+
+                users.forEach(user =>{
+                    if(user.rooms.includes(roomId)){
+                        user.ws.send(JSON.stringify({
+                            type: "delete",
+                            message: shapeId,
+                            roomId: roomId
+                        }))
+                    }
+                })
+                
+            }
+            catch (error) {
+                console.error("Delete error: ", error)
+            }
         }
     })
 });
