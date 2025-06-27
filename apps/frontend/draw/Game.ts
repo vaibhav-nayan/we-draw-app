@@ -1,10 +1,10 @@
-import { act } from "react";
 import { getExistingShapes } from "./http-calls";
 import { ToolType } from "@/components/Canvas";
 
 const selectSVGUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1tb3VzZS1wb2ludGVyMi1pY29uIGx1Y2lkZS1tb3VzZS1wb2ludGVyLTIiPjxwYXRoIGQ9Ik00LjAzNyA0LjY4OGEuNDk1LjQ5NSAwIDAgMSAuNjUxLS42NTFsMTYgNi41YS41LjUgMCAwIDEtLjA2My45NDdsLTYuMTI0IDEuNThhMiAyIDAgMCAwLTEuNDM4IDEuNDM1bC0xLjU3OSA2LjEyNmEuNS41IDAgMCAxLS45NDcuMDYzeiIvPjwvc3ZnPg=="
 const pencilSVGUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1wZW5jaWwtaWNvbiBsdWNpZGUtcGVuY2lsIj48cGF0aCBkPSJNMjEuMTc0IDYuODEyYTEgMSAwIDAgMC0zLjk4Ni0zLjk4N0wzLjg0MiAxNi4xNzRhMiAyIDAgMCAwLS41LjgzbC0xLjMyMSA0LjM1MmEuNS41IDAgMCAwIC42MjMuNjIybDQuMzUzLTEuMzJhMiAyIDAgMCAwIC44My0uNDk3eiIvPjxwYXRoIGQ9Im0xNSA1IDQgNCIvPjwvc3ZnPg=="
 const eraserSVGUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1lcmFzZXItaWNvbiBsdWNpZGUtZXJhc2VyIj48cGF0aCBkPSJNMjEgMjFIOGEyIDIgMCAwIDEtMS40Mi0uNTg3bC0zLjk5NC0zLjk5OWEyIDIgMCAwIDEgMC0yLjgyOGwxMC0xMGEyIDIgMCAwIDEgMi44MjkgMGw1Ljk5OSA2YTIgMiAwIDAgMSAwIDIuODI4TDEyLjgzNCAyMSIvPjxwYXRoIGQ9Im01LjA4MiAxMS4wOSA4LjgyOCA4LjgyOCIvPjwvc3ZnPg=="
+
 
 export type Shape = {
     id?: number
@@ -15,6 +15,7 @@ export type Shape = {
         width: number;
         height: number;
     }
+    clientId? : string
     selected? : boolean
 } | {
     id?: number
@@ -24,6 +25,7 @@ export type Shape = {
         y: number;
         radius: number;
     }
+    clientId? : string
     selected? : boolean
 } | {
     id?: number
@@ -34,6 +36,7 @@ export type Shape = {
         x2: number;
         y2: number;
     }
+    clientId? : string
     selected? : boolean
 } | {
     id?: number
@@ -45,11 +48,14 @@ export type Shape = {
             order: number;
         }[]
     }
+    clientId? : string
     selected? : boolean
 }
 
 export type Action = {
-    type : "draw" | "delete",
+    type : "draw" | "delete" | "move",
+    dx? : number,
+    dy? : number,
     shapes: Shape[],
     userId? : string,
     timestamp : number       
@@ -76,23 +82,137 @@ export class Game {
     private middleMouseDown : boolean = false;
     private pencilPoints : {x: number; y: number; order: number}[] = []
     private eraserPoints : {x: number; y: number}[] = []
-    private undoStack : Action[] = [];
-    private redoStack : Action[] = [];
-
-    private saveActionForUndo (action : Action) {
-        this.undoStack.push(action);
-        this.redoStack = [];
+    private MAX_STACK_SIZE : number = 100;
+    private undoStack : Record<string, Action[]> = {};
+    private redoStack : Record<string, Action[]> = {};
+    private activeTransform = {
+        type : null as "move" | null,
+        shapeId : null as number | null,
+        startX : 0,
+        startY : 0,
+        original: null as Shape | null
     }
 
-    private undo = () => {
-        if (this.undoStack.length === 0) return;
+    private applyMoveLocally(shapeId: number, dx: number, dy: number) {
+        console.log("applyMoveLocally reached")
+        const shape = this.existingShapes.find(s => s.id === shapeId);
+        console.log("Apply move locally log")
+        console.log(shape)
+        if (!shape) return;
 
-        const action = this.undoStack.pop()!;
-        this.redoStack.push({
+        if (shape.type === "RECT" && shape.rect) {
+            shape.rect.x += dx;
+            shape.rect.y += dy;
+        } else if (shape.type === "CIRCLE" && shape.circle) {
+            shape.circle.x += dx;
+            shape.circle.y += dy;
+        } else if (shape.type === "LINE" && shape.line) {
+            shape.line.x1 += dx;
+            shape.line.y1 += dy;
+            shape.line.x2 += dx;
+            shape.line.y2 += dy;
+        } else if (shape.type === "PENCIL" && shape.pencil && shape.pencil.points) {
+            shape.pencil.points.forEach(point => {
+            point.x += dx;
+            point.y += dy;
+            });
+        }
+
+        this.clearCanvas(); 
+    }
+
+    private saveActionForUndo (stack: Record<string, Action[]> , roomId: string, action: Action){
+        if(!stack[roomId]) stack[roomId] = [];
+        stack[roomId].push(action)
+
+        if(stack[roomId].length > this.MAX_STACK_SIZE) {
+            stack[roomId].shift()
+        }
+    }
+
+    private undo = (roomId: string) => {
+        const stack = this.undoStack[roomId];
+        console.log("undo Logs")
+        console.log(stack)
+        if(!stack || stack.length === 0) return;
+
+        const action = stack.pop();
+        console.log(action)
+        if(!action) return;
+
+        // PUSHING INTO REDO STACK
+        if(!this.redoStack[roomId]){
+            this.redoStack[roomId] = [];
+        }
+        if(action.type === 'move'){
+            this.redoStack[roomId] = this.redoStack[roomId] || [];
+            this.redoStack[roomId].push(action)
+        }
+        else {
+            const newAction: Action = {
+                type: action.type === "draw" ? "delete" : "draw",
+                shapes: action.shapes,
+                timestamp: Date.now()
+            }
+            this.redoStack[roomId].push(newAction)
+        }
+
+        // UPDATING EXISTING SHAPES
+        if (action.type === "draw") {
+            const idsToDelete = action.shapes.map(s => s.id);
+            this.existingShapes = this.existingShapes.filter(
+                s => !idsToDelete.includes(s.id!)
+            )
+        } else if (action.type === "delete") {
+            this.existingShapes.push(...action.shapes);
+        } else if (action.type === 'move'){
+            console.log("move block reached")
+            const shapeId = action.shapes[0].id;
+            const dx = action.dx;
+            const dy = action.dy;
+            console.log(shapeId, dx, dy)
+            if(!shapeId || !dx || !dy) return;
+            this.applyMoveLocally(shapeId , -dx, -dy)
+        }
+
+        
+        // UPDATING SERVER
+        this.socket.send(JSON.stringify({
+            type: "undo",
+            message: action,
+            roomId : this.roomId
+        }));
+        this.clearCanvas();
+    }
+
+    private redo = (roomId : string) => {
+        const stack = this.redoStack[roomId];
+        if(!stack || stack.length === 0) return;
+
+        const action = stack.pop();
+        if(!action) return;
+        if(!this.undoStack[roomId]){
+            this.undoStack[roomId] = [];
+        }
+        if(action.type === 'move'){
+            if (!action.dx || !action.dy) return;
+            const ndx = -action.dx;
+            const ndy = -action.dy;
+            console.log(action.dx, action.dy, ndx, ndy)
+            this.undoStack[roomId] = this.undoStack[roomId] || [];
+            this.undoStack[roomId].push({
+                type: "move",
+                shapes: action.shapes,
+                dx: action.dx!,
+                dy: action.dy!,
+                timestamp: Date.now()
+            })
+        }
+        else {this.undoStack[roomId].push({
             type: action.type === "draw" ? "delete" : "draw",
             shapes: action.shapes,
             timestamp: Date.now()
-        })
+        })}
 
         if (action.type === "draw") {
             const idsToDelete = action.shapes.map(s => s.id);
@@ -101,32 +221,14 @@ export class Game {
             )
         } else if (action.type === "delete") {
             this.existingShapes.push(...action.shapes);
-        }
+        } 
+        if (action.type === 'move'){
 
-        this.clearCanvas();
-
-        this.socket.send(JSON.stringify({
-            type: "undo",
-            message: action,
-            roomId : this.roomId
-        }));
-    }
-
-    private redo = () => {
-        if (this.redoStack.length === 0) return;
-
-        const action = this.redoStack.pop()!;
-        this.undoStack.push({
-            type: action.type === "draw" ? "delete" : "draw",
-            shapes: action.shapes,
-            timestamp: Date.now()
-        })
-
-        if (action.type === "draw") {
-            this.existingShapes.push(...action.shapes);
-        } else if (action.type === "delete") {
-            const idsToRemove = action.shapes.map(s => s.id);
-            this.existingShapes = this.existingShapes.filter(s => !idsToRemove.includes(s.id));
+            const shapeId = action.shapes[0].id;
+            const dx = action.dx;
+            const dy = action.dy;
+            if(!shapeId || !dx || !dy) return;
+            this.applyMoveLocally(shapeId , -dx, -dy)
         }
 
         this.clearCanvas();
@@ -135,7 +237,7 @@ export class Game {
             type: "redo",
             message: action,
             roomId : this.roomId
-        }))
+        }));
     }
 
     private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number) : boolean {
@@ -172,6 +274,8 @@ export class Game {
         return (yReal + this.offsetY) * this.scale;
     }
 
+    
+
     private toRealX(xVirtual : number) : number {
         return xVirtual / this.scale - this.offsetX;
     }
@@ -179,6 +283,8 @@ export class Game {
     private toRealY(yVirtual : number) : number {
         return yVirtual / this.scale - this.offsetY;
     }
+
+    
 
     private vitualHeight () : number {
         return this.canvas.clientHeight / this.scale;
@@ -188,18 +294,32 @@ export class Game {
         return this.canvas.clientWidth / this.scale;
     }
 
+    private tooVirtualX(xReal : number) : number {
+        return (xReal - this.offsetX) * this.scale;
+    }
+
+    private tooVirtualY(yReal : number) : number {
+        return (yReal - this.offsetY) * this.scale;
+    }
+
+    private tooRealX(xVirtual : number) : number {
+        return xVirtual / this.scale + this.offsetX;
+    }
+
+    private tooRealY(yVirtual : number) : number {
+        return yVirtual / this.scale + this.offsetY;
+    }
+
     private getHoveredHandleOrShape(x: number, y: number): { type: 'handle' | 'shape' | 'none', cursor?: string } {
+        const virtualX = this.tooVirtualX(x); // from screen to world
+        const virtualY = this.tooVirtualY(y);
         const handleSize = 8;
-        const half = handleSize / this.scale / 2; // adjust for real coords
+        const half = handleSize / this.scale / 2; // important: adjust for zoom
 
         for (const shape of this.existingShapes) {
             if (!shape.selected) continue;
 
-            const { vx, vy, vw, vh } = this.getBoundingBoxFromShape(shape);
-            const rx = vx / this.scale;
-            const ry = vy / this.scale;
-            const rw = vw / this.scale;
-            const rh = vh / this.scale;
+            const { rx, ry, rw, rh } = this.getBoundingBoxFromShape(shape);
 
             const corners = [
                 { x: rx,         y: ry,         cursor: 'nwse-resize' }, // top-left
@@ -208,18 +328,21 @@ export class Game {
                 { x: rx + rw,    y: ry + rh,    cursor: 'nwse-resize' }  // bottom-right
             ];
 
-            // 1. Check handles
             for (const corner of corners) {
                 if (
-                    x >= corner.x - half && x <= corner.x + half &&
-                    y >= corner.y - half && y <= corner.y + half
-                ) {
+                    virtualX >= corner.x - half && virtualX <= corner.x + half &&
+                    virtualY >= corner.y - half && virtualY <= corner.y + half
+                )
+                {
                     return { type: 'handle', cursor: corner.cursor };
                 }
             }
 
-            // 2. Check if inside shape bounding box
-            if (x >= rx && x <= rx + rw && y >= ry && y <= ry + rh) {
+            if (
+                virtualX >= rx && virtualX <= rx + rw &&
+                virtualY >= ry && virtualY <= ry + rh
+            )
+            {
                 return { type: 'shape' };
             }
         }
@@ -227,22 +350,23 @@ export class Game {
         return { type: 'none' };
     }
 
-    private getBoundingBoxFromShape(shape: Shape): { vx: number, vy: number, vw: number, vh: number } {
+
+    private getBoundingBoxFromShape(shape: Shape): { rx: number, ry: number, rw: number, rh: number } {
         if (shape.type === 'RECT' && shape.rect) {
             return {
-                vx: this.toVirtualX(shape.rect.x),
-                vy: this.toVirtualY(shape.rect.y),
-                vw: shape.rect.width * this.scale,
-                vh: shape.rect.height * this.scale
+                rx: shape.rect.x,
+                ry: shape.rect.y,
+                rw: shape.rect.width,
+                rh: shape.rect.height
             };
         }
         if (shape.type === 'CIRCLE' && shape.circle) {
             const { x, y, radius } = shape.circle;
             return {
-                vx: this.toVirtualX(x - radius),
-                vy: this.toVirtualY(y - radius),
-                vw: radius * 2 * this.scale,
-                vh: radius * 2 * this.scale
+                rx: x - radius,
+                ry: y - radius,
+                rw: radius * 2,
+                rh: radius * 2
             };
         }
         if (shape.type === 'LINE' && shape.line) {
@@ -251,10 +375,10 @@ export class Game {
             const maxX = Math.max(shape.line.x1, shape.line.x2);
             const maxY = Math.max(shape.line.y1, shape.line.y2);
             return {
-                vx: this.toVirtualX(minX),
-                vy: this.toVirtualY(minY),
-                vw: (maxX - minX) * this.scale,
-                vh: (maxY - minY) * this.scale
+                rx: minX,
+                ry: minY,
+                rw: maxX - minX,
+                rh: maxY - minY
             };
         }
         if (shape.type === 'PENCIL' && shape.pencil.points.length >= 2) {
@@ -265,15 +389,75 @@ export class Game {
             const maxX = Math.max(...xs);
             const maxY = Math.max(...ys);
             return {
-                vx: this.toVirtualX(minX),
-                vy: this.toVirtualY(minY),
-                vw: (maxX - minX) * this.scale,
-                vh: (maxY - minY) * this.scale
+                rx: minX,
+                ry: minY,
+                rw: maxX - minX,
+                rh: maxY - minY
             };
         }
-        return { vx: 0, vy: 0, vw: 0, vh: 0 }; // fallback
+        return { rx: 0, ry: 0, rw: 0, rh: 0 };
     }
+
     
+    private getShapeAt(x : number, y: number) : Shape | null {
+        for(let i=this.existingShapes.length-1 ; i>=0; i--){
+            const shape = this.existingShapes[i];
+
+            if(shape.type === 'RECT') {
+                // console.log("check rectangles")
+                // console.log(shape.rect)
+                // console.log(x, y)
+                // console.log(shape)
+                const {x: sx, y: sy, width, height} = shape.rect;
+                if(x >= sx && x<= sx+width && y>=sy && y<=sy+height) {
+                    console.log("shape found")
+                    console.log(shape)
+                    return shape;
+                }
+            }
+
+            else if (shape.type === 'CIRCLE'){
+                const {x: cx, y:cy, radius} = shape.circle;
+                const distance = Math.hypot(x-cx , y-cy);
+                if(distance <= radius) {
+                    return shape;
+                }
+            }
+
+            else if (shape.type === 'LINE'){
+                const {x1, y1, x2, y2} = shape.line;
+                if( this.isPointNearLine(x, y, x1, y1, x2, y2, 5)){
+                    return shape;
+                }
+            }
+
+            else if (shape.type ===  'PENCIL'){
+                for (const point of shape.pencil.points) {
+                    if (Math.hypot(point.x - x, point.y - y) <= 5) {
+                        return shape;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private copyShape(shape: Shape) : Shape {
+        return JSON.parse(JSON.stringify(shape))
+    }
+
+    private createRect(startX: number, startY: number, endX: number, endY: number) : Shape {
+        return {
+            type: "RECT",
+            rect: {
+                x: startX,
+                y: startY,
+                width: endX - startX,
+                height: endY - startY
+            }
+        };
+    }
+
     constructor (canvas : HTMLCanvasElement, roomId : string, socket : WebSocket) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d")!
@@ -313,30 +497,49 @@ export class Game {
 
     async init () {
         this.existingShapes = await getExistingShapes(this.roomId);
-        console.log(this.existingShapes)
+        // console.log(this.existingShapes)
         this.clearCanvas()
     }
 
     initHandlers () {
         this.socket.onmessage = (event) =>{
             const message = JSON.parse(event.data);
-            if(message.type === "draw"){
-                const shape = message.message;
-                console.log("Message received")
-                console.log(shape)
-                this.saveActionForUndo({
-                    type: "draw",
-                    shapes: [shape],
-                    timestamp: Date.now()
-                })
-                console.log("Stacks")
-                console.log(this.undoStack)
-                console.log(this.redoStack)
-                this.existingShapes.push(shape);
-                this.clearCanvas();
+            if(message.type === "confirm-draw"){
+                // console.log(message.message)
+                const {clientId, serverId, shape} = message.message;
+                const shapeIndex = this.existingShapes.findIndex(s => s.clientId === clientId);
+
+                if (shapeIndex !== -1) {
+
+                    // LOCAL SHAPE
+                    this.existingShapes[shapeIndex].id = serverId;
+                    this.saveActionForUndo(this.undoStack, this.roomId,{
+                        type: "draw",
+                        shapes: [{...shape, id: serverId}],
+                        timestamp: Date.now()
+                    })
+                    console.log("Frontend Stacks")
+                    console.log(this.undoStack[this.roomId])
+                    console.log(this.redoStack[this.roomId])
+                    this.clearCanvas()
+                }
+                else {
+
+                    // REMOTE SHAPE
+                    this.saveActionForUndo(this.undoStack, this.roomId,{
+                        type: "draw",
+                        shapes: [{...shape, id: serverId}],
+                        timestamp: Date.now()
+                    })
+                    this.existingShapes.push({
+                        ...shape,
+                        id: serverId
+                    });
+                    this.clearCanvas();
+                }
                 // edge case: if i am drawing and someone adds a shape, my drawing will be gone for a sec
             }
-            else if (message.type === "delete") {
+            else if (message.type === "confirm-delete") {
                 const idsToDelete = message.message;
                 // console.log(idsToDelete)
                 this.existingShapes = this.existingShapes.filter(shape =>{
@@ -359,10 +562,31 @@ export class Game {
 
                 this.clearCanvas();
             }
-            else if (message.type === "sync") {
-                const syncedShapes: Shape[] = message.message;
-                console.log(syncedShapes);
-                this.existingShapes = syncedShapes;
+            else if(message.type === 'confirm-move') {
+                const {shapeId, dx, dy} = message.message;
+                const shape = this.existingShapes.find(s => s.id === shapeId);
+
+                if(!shape) return;
+                if (shape.type === 'RECT') {
+                    shape.rect.x += dx;
+                    shape.rect.y += dy;
+                }
+                else if (shape.type === 'CIRCLE') {
+                    shape.circle.x += dx;
+                    shape.circle.y += dy;
+                }
+                else if (shape.type === 'LINE') {
+                    shape.line.x1 += dx;
+                    shape.line.y1 += dy;
+                    shape.line.x2 += dx;
+                    shape.line.y2 += dy;
+                }
+                else if(shape.type === 'PENCIL') {
+                    shape.pencil.points.forEach(point => {
+                        point.x += dx;
+                        point.y += dy;
+                    });
+                }
                 this.clearCanvas();
             }
         }
@@ -520,6 +744,21 @@ export class Game {
         this.cursorY = e.pageY;
         this.prevCursorX = e.pageX;
         this.prevCursorY = e.pageY;
+
+        const realX = this.toRealX(e.clientX);
+        const realY = this.toRealY(e.clientY)
+
+        const hoveredShape = this.getShapeAt(realX, realY);
+        // console.log(hoveredShape)
+        if (hoveredShape && hoveredShape.selected) {
+            this.activeTransform = {
+                type : "move",
+                shapeId: hoveredShape.id!, 
+                startX : realX,
+                startY : realY,
+                original: this.copyShape(hoveredShape)
+            }
+        }
         if(e.button === 1){
             this.canvas.style.cursor = 'grabbing';
             this.middleMouseDown = true;
@@ -546,16 +785,19 @@ export class Game {
         this.cursorX = e.pageX;
         this.cursorY = e.pageY;
 
-        const virtualX = this.toVirtualX(e.clientX);
-        const virtualY = this.toVirtualY(e.clientY);
+        if(this.tool === 'SELECT'){
+            const virtualX = this.toVirtualX(e.clientX);
+            const virtualY = this.toVirtualY(e.clientY);
 
-        const hovered = this.getHoveredHandleOrShape(virtualX, virtualY);
-        if (hovered.type === 'handle') {
-            this.canvas.style.cursor = hovered.cursor!;
-        } else if (hovered.type === 'shape') {
-            this.canvas.style.cursor = 'move';
-        } else {
-            this.canvas.style.cursor = 'crosshair';
+            const hovered = this.getHoveredHandleOrShape(virtualX, virtualY);
+            if (hovered.type === 'handle') {
+                this.canvas.style.cursor = hovered.cursor!;
+            } else if (hovered.type === 'shape') {
+                this.canvas.style.cursor = 'move';
+            }
+            else {
+                this.canvas.style.cursor = `url(${selectSVGUrl}) 0 0, auto`;
+            }
         }
         
         if(this.middleMouseDown){
@@ -621,90 +863,128 @@ export class Game {
                     this.ctx.stroke();
                 }
                 else if (this.tool === 'SELECT'){
-                    this.ctx.setLineDash([5, 5]);
-                    this.ctx.strokeRect(this.startX, this.startY, width, height);
-                    this.existingShapes.forEach(shape => {
-                        let shapeStartX = 0;
-                        let shapeStartY = 0;
-                        let shapeEndX = 0;
-                        let shapeEndY = 0;
-                        if(shape.type === 'RECT') {
-                            if(shape.rect === undefined) return;
-                            shapeStartX = shape.rect.x;
-                            shapeStartY = shape.rect.y;
-                            shapeEndX = shape.rect.x + shape.rect.width;
-                            shapeEndY = shape.rect.y + shape.rect.height;
-                        }
-                        else if(shape.type === 'CIRCLE') {
-                            if(shape.circle === undefined) return;
-                            shapeStartX = shape.circle.x - shape.circle.radius;
-                            shapeStartY = shape.circle.y - shape.circle.radius;
-                            shapeEndX = shape.circle.x + shape.circle.radius;
-                            shapeEndY = shape.circle.y + shape.circle.radius;
-                        }
-                        else if(shape.type === 'LINE') {
-                            if(shape.line === undefined) return;
-                            shapeStartX = Math.min(shape.line.x1, shape.line.x2);
-                            shapeStartY = Math.min(shape.line.y1, shape.line.y2);
-                            shapeEndX = Math.max(shape.line.x1, shape.line.x2);
-                            shapeEndY = Math.max(shape.line.y1, shape.line.y2);
-                        }
-                        else if(shape.type === 'PENCIL'){
-                            const points = shape.pencil?.points ?? [];
-                            const xs = points.map(p => p.x);
-                            const ys = points.map(p => p.y);
-                            shapeStartX = Math.min(...xs);
-                            shapeStartY = Math.min(...ys);
-                            shapeEndX = Math.max(...xs);
-                            shapeEndY = Math.max(...ys);
-                        }
-                        const trueSelectStartX = this.toRealX(this.startX);
-                        const trueSelectStartY = this.toRealY(this.startY);
-                        const trueSelectEndX = this.toRealX(this.startX + width);
-                        const trueSelectEndY = this.toRealY(this.startY + height);
+                    if (this.activeTransform.type === "move"){
 
-                        if (
-                            shapeStartX >= trueSelectStartX &&
-                            shapeEndX <= trueSelectEndX &&
-                            shapeStartY >= trueSelectStartY &&
-                            shapeEndY <= trueSelectEndY
-                        ) {
-                            // Compute virtual coords and dimensions
-                            const vx = this.toVirtualX(shapeStartX);
-                            const vy = this.toVirtualY(shapeStartY);
-                            const vwidth = (shapeEndX - shapeStartX) * this.scale;
-                            const vheight = (shapeEndY - shapeStartY) * this.scale;
+                        const realX = this.toRealX(e.clientX);
+                        const realY = this.toRealY(e.clientY);
+                        const dx = realX - this.activeTransform.startX;
+                        const dy = realY - this.activeTransform.startY;
 
-                            // Draw dashed bounding box
-                            this.ctx.strokeStyle = 'rgb(0, 188, 212)';
-                            this.ctx.lineWidth = 0.8;
-                            this.ctx.setLineDash([4, 2]);
-                            this.ctx.strokeRect(vx, vy, vwidth, vheight);
-                            this.ctx.setLineDash([]);
+                        const shape = this.existingShapes.find(s => s.id === this.activeTransform.shapeId);
+                        if (!shape) return;
 
-                            // Draw corner handles
-                            const handleSize = 8;
-                            const half = handleSize / 2;
-                            const corners = [
-                                { x: vx,             y: vy },               // top-left
-                                { x: vx + vwidth,    y: vy },               // top-right
-                                { x: vx,             y: vy + vheight },     // bottom-left
-                                { x: vx + vwidth,    y: vy + vheight }      // bottom-right
-                            ];
+                        const original : Shape = this.activeTransform.original as Shape;
+                        
+                        if (shape.type === 'RECT' && original.type === 'RECT') {
+                            shape.rect.x = original.rect.x + dx;
+                            shape.rect.y = original.rect.y + dy;
+                        } 
+                        else if (shape.type === 'CIRCLE' && original.type === 'CIRCLE') {
+                            shape.circle.x = original.circle.x + dx;
+                            shape.circle.y = original.circle.y + dy;
+                        }
+                        else if (shape.type === "LINE" && original.type === 'LINE') {
+                            shape.line.x1 = original.line.x1 + dx;
+                            shape.line.y1 = original.line.y1 + dy;
+                            shape.line.x2 = original.line.x2 + dx;
+                            shape.line.y2 = original.line.y2 + dy;
+                        }
+                        else if (shape.type === 'PENCIL' && original.type === 'PENCIL') {
+                            shape.pencil.points = original.pencil.points.map(p => ({
+                                ...p,
+                                x : p.x + dx,
+                                y : p.y + dy
+                            }));
+                        }
 
-                            this.ctx.fillStyle = 'rgb(0, 188, 212)';
-                            for (const corner of corners) {
-                                this.ctx.fillRect(corner.x - half, corner.y - half, handleSize, handleSize);
+                        this.clearCanvas();
+                    }
+                    else {
+                        this.ctx.setLineDash([5, 5]);
+                        this.ctx.strokeRect(this.startX, this.startY, width, height);
+                        this.existingShapes.forEach(shape => {
+                            let shapeStartX = 0;
+                            let shapeStartY = 0;
+                            let shapeEndX = 0;
+                            let shapeEndY = 0;
+                            if(shape.type === 'RECT') {
+                                if(shape.rect === undefined) return;
+                                shapeStartX = shape.rect.x;
+                                shapeStartY = shape.rect.y;
+                                shapeEndX = shape.rect.x + shape.rect.width;
+                                shapeEndY = shape.rect.y + shape.rect.height;
                             }
+                            else if(shape.type === 'CIRCLE') {
+                                if(shape.circle === undefined) return;
+                                shapeStartX = shape.circle.x - shape.circle.radius;
+                                shapeStartY = shape.circle.y - shape.circle.radius;
+                                shapeEndX = shape.circle.x + shape.circle.radius;
+                                shapeEndY = shape.circle.y + shape.circle.radius;
+                            }
+                            else if(shape.type === 'LINE') {
+                                if(shape.line === undefined) return;
+                                shapeStartX = Math.min(shape.line.x1, shape.line.x2);
+                                shapeStartY = Math.min(shape.line.y1, shape.line.y2);
+                                shapeEndX = Math.max(shape.line.x1, shape.line.x2);
+                                shapeEndY = Math.max(shape.line.y1, shape.line.y2);
+                            }
+                            else if(shape.type === 'PENCIL'){
+                                const points = shape.pencil?.points ?? [];
+                                const xs = points.map(p => p.x);
+                                const ys = points.map(p => p.y);
+                                shapeStartX = Math.min(...xs);
+                                shapeStartY = Math.min(...ys);
+                                shapeEndX = Math.max(...xs);
+                                shapeEndY = Math.max(...ys);
+                            }
+                            const trueSelectStartX = this.toRealX(this.startX);
+                            const trueSelectStartY = this.toRealY(this.startY);
+                            const trueSelectEndX = this.toRealX(this.startX + width);
+                            const trueSelectEndY = this.toRealY(this.startY + height);
 
-                            // Mark shape as selected
-                            shape.selected = true;
-                        }
-                        else {
-                            this.ctx.strokeStyle = 'white';
-                            shape.selected = false;
-                        }
-                    })
+                            if (
+                                shapeStartX >= trueSelectStartX &&
+                                shapeEndX <= trueSelectEndX &&
+                                shapeStartY >= trueSelectStartY &&
+                                shapeEndY <= trueSelectEndY
+                            ) {
+                                // Compute virtual coords and dimensions
+                                const vx = this.toVirtualX(shapeStartX);
+                                const vy = this.toVirtualY(shapeStartY);
+                                const vwidth = (shapeEndX - shapeStartX) * this.scale;
+                                const vheight = (shapeEndY - shapeStartY) * this.scale;
+
+                                // Draw dashed bounding box
+                                this.ctx.strokeStyle = 'rgb(0, 188, 212)';
+                                this.ctx.lineWidth = 0.8;
+                                this.ctx.setLineDash([4, 2]);
+                                this.ctx.strokeRect(vx, vy, vwidth, vheight);
+                                this.ctx.setLineDash([]);
+
+                                // Draw corner handles
+                                const handleSize = 8;
+                                const half = handleSize / 2;
+                                const corners = [
+                                    { x: vx,             y: vy },               // top-left
+                                    { x: vx + vwidth,    y: vy },               // top-right
+                                    { x: vx,             y: vy + vheight },     // bottom-left
+                                    { x: vx + vwidth,    y: vy + vheight }      // bottom-right
+                                ];
+
+                                this.ctx.fillStyle = 'rgb(0, 188, 212)';
+                                for (const corner of corners) {
+                                    this.ctx.fillRect(corner.x - half, corner.y - half, handleSize, handleSize);
+                                }
+
+                                // Mark shape as selected
+                                shape.selected = true;
+                            }
+                            else {
+                                this.ctx.strokeStyle = 'white';
+                                shape.selected = false;
+                            }
+                        })
+                    }
                 }
                 else {
                     this.canvas.style.cursor = 'grabbing';
@@ -734,15 +1014,7 @@ export class Game {
             this.canvas.style.cursor = 'crosshair';
         }
         else if(this.tool === 'RECT'){
-            shape = {
-                type: "RECT",
-                rect: {
-                    x: trueStartX,
-                    y: trueStartY,
-                    width: width,
-                    height: height
-                }
-            } 
+            shape = this.createRect(trueStartX, trueStartY, trueEndX, trueEndY)
         }
         else if (this.tool === 'CIRCLE'){
             shape = {
@@ -843,15 +1115,74 @@ export class Game {
                     timestamp: Date.now()
                 }
 
-                this.saveActionForUndo(action);
+                this.saveActionForUndo(this.undoStack, this.roomId, action);
                 this.existingShapes = shapesToKeep;
             }
 
             this.clearCanvas()
         }
         else if (this.tool === 'SELECT'){
-            console.log(trueStartX, trueStartY, trueEndX, trueEndY)
-            this.clearCanvas();
+            if (this.activeTransform.type === 'move' && this.activeTransform.shapeId) {
+
+
+                const shape= this.existingShapes.find(s => s.id === this.activeTransform.shapeId);
+                const original = this.activeTransform.original;
+                if(!shape || !original) return;
+
+                let dx = 0, dy = 0;
+
+                if (shape.type === 'RECT' && original.type==='RECT') {
+                    dx = shape.rect.x - original.rect.x;
+                    dy = shape.rect.y - original.rect.y;
+                }
+                else if (shape.type === 'CIRCLE' && original.type==='CIRCLE') {
+                    dx = shape.circle.x - original.circle.x;
+                    dy = shape.circle.y - original.circle.y;
+                }else if (shape.type === 'LINE' && original.type==='LINE') {
+                    dx = shape.line.x1 - original.line.x1;
+                    dy = shape.line.y1 - original.line.y1;
+                }else if (shape.type === 'PENCIL' && original.type==='PENCIL') {
+                    dx = shape.pencil.points[0].x - original.pencil.points[0].x;
+                    dy = shape.pencil.points[0].y - original.pencil.points[0].y;
+                }
+
+                if (dx === 0 && dy === 0) {
+                    this.activeTransform = {
+                        type: null,
+                        shapeId: null,
+                        startX: 0,
+                        startY: 0,
+                        original: null
+                    }
+                    return;
+                }
+
+                this.socket.send(JSON.stringify({
+                    type: "move",
+                    message: {shapeId: shape.id, dx: dx, dy: dy},
+                    roomId: this.roomId
+                }))
+                this.saveActionForUndo(this.undoStack, this.roomId, {
+                    type: "move",
+                    dx: dx,
+                    dy: dy,
+                    shapes: [this.copyShape(shape)],
+                    timestamp: Date.now()
+                })
+                shape.selected = true;
+                this.activeTransform = {
+                    type: null,
+                    shapeId: null,
+                    startX: 0,
+                    startY: 0,
+                    original: null
+                }
+                this.clearCanvas()
+            }
+            else {
+                console.log(trueStartX, trueStartY, trueEndX, trueEndY)
+                this.clearCanvas();
+            }
         }
         else {
             this.canvas.style.cursor = 'grab';
@@ -859,11 +1190,16 @@ export class Game {
 
         if(!shape) return;
 
+        const clientId = crypto.randomUUID();
         this.socket.send(JSON.stringify({
             type: "draw",
-            message: shape,
+            message: {
+                ...shape,
+                clientId
+            },
             roomId: this.roomId
         }));
+        this.existingShapes.push({...shape, clientId})
         this.clearCanvas();
     }
 
@@ -895,7 +1231,7 @@ export class Game {
         const shiftKey  = e.shiftKey;
 
         if(ctrlKey && e.key === 'z' && !shiftKey) {
-            this.undo();
+            this.undo(this.roomId);
             console.log("Stacks")
             console.log(this.undoStack)
             console.log(this.redoStack)
@@ -903,7 +1239,7 @@ export class Game {
         }
 
         if (ctrlKey && e.key === "Z" && shiftKey) {
-            this.redo();
+            this.redo(this.roomId);
             console.log("Stacks")
             console.log(this.undoStack)
             console.log(this.redoStack)

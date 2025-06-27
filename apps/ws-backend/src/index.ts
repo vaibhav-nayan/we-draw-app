@@ -47,7 +47,9 @@ export type Shape = {
 }
 
 export type Action = {
-    type : "draw" | "delete",
+    type : "draw" | "delete"| "move",
+    dx? : number,
+    dy? : number,
     shapes: Shape[],
     userId? : string,
     timestamp : number       
@@ -81,6 +83,67 @@ function authorized (url : string) : string | null {
     }
     catch (e) {
         return null
+    }
+}
+
+async function applyMoveToShape(shapeId: number, dx: number, dy: number) {
+    const shape = await prisma.shape.findUnique({
+        where: {id: shapeId},
+        include: {
+            rect: true,
+            circle: true,
+            line: true,
+            pencil: {include: {points: true}}
+        }
+    });
+
+    if (!shape) return;
+
+    if (shape.type === 'RECT' && shape.rect) {
+        await prisma.rect.update({
+            where: {rectId: shapeId},
+            data: {
+                x: shape.rect.x + dx,
+                y: shape.rect.y + dy
+            }
+        })
+    }
+
+    else if (shape.type === 'CIRCLE' && shape.circle) {
+        await prisma.circle.update({
+            where: {circleId: shapeId},
+            data: {
+                x: shape.circle.x + dx,
+                y: shape.circle.y + dy
+            }
+        })
+    }
+
+    else if (shape.type === 'LINE' && shape.line) {
+        await prisma.line.update({
+            where: {lineId: shapeId},
+            data: {
+                x1: shape.line.x1 + dx,
+                y1: shape.line.y1 + dy,
+                x2: shape.line.x2 + dx,
+                y2: shape.line.y2 + dy
+            }
+        })
+    }
+
+    else if(shape.type === 'PENCIL' && shape.pencil) {
+        const updates = shape.pencil.points.map(point =>
+            prisma.point.update({
+                where: {pointId: point.pointId},
+                data: {
+                    x: point.x + dx,
+                    y: point.y + dy
+                }
+            })
+        )
+        await prisma.$transaction([
+            ...updates
+        ]);
     }
 }
 
@@ -127,15 +190,8 @@ wss.on('connection', (ws, request) => {
         if(parsedData.type === "draw"){
             const roomId = parsedData.roomId;
             const shape = parsedData.message
-            // const shape = parsedShape.shape;
-            //check about message long, slangy, etc.
-            // console.log("parsedData.message is this")
-            // console.log(parsedData.message)
             console.log("Shape Creating Log")
-            // console.log(parsedShape)
-            // console.log("This is the shape object")
-            console.log(shape)
-
+            // console.log(shape)
 
             const newShape = await prisma.shape.create({
                 data: {
@@ -199,17 +255,26 @@ wss.on('connection', (ws, request) => {
                 }
             })
 
+            console.log(newShape)
+
             undoStack[roomId] ||= [];
             undoStack[roomId].push({
                 type: "draw",
                 shapes: [newShape as Shape],
                 timestamp: Date.now()
             })
+            console.log("Backend Stacks")
+            console.log(undoStack)
+            console.log(redoStack)
             users.forEach(user =>{
                 if(user.rooms.includes(roomId)){
                     user.ws.send(JSON.stringify({
-                        type: "draw",
-                        message: newShape,
+                        type: "confirm-draw",
+                        message: {
+                            clientId : shape.clientId,
+                            serverId : newShape.id,
+                            shape : newShape
+                        },
                         roomId: roomId
                     }))
                 }
@@ -227,7 +292,7 @@ wss.on('connection', (ws, request) => {
             // console.log(shapeId)
 
             try {
-                console.log(shapeIds)
+                // console.log(shapeIds)
                 const shapesToDelete = await prisma.shape.findMany({
                     where: {
                         id: {
@@ -249,12 +314,17 @@ wss.on('connection', (ws, request) => {
                 if (!shapesToDelete) {
                     return;
                 }
+                console.log("delete Logs")
+                console.log(shapesToDelete)
                 undoStack[roomId] ||= [];
                 undoStack[roomId].push({
-                type: "delete",
-                shapes: shapesToDelete as Shape[],
-                timestamp: Date.now()
-            })
+                    type: "delete",
+                    shapes: shapesToDelete as Shape[],
+                    timestamp: Date.now()
+                })
+                console.log("Backend Stacks")
+                console.log(undoStack)
+                console.log(redoStack)
                 await prisma.shape.deleteMany({
                     where: {
                         id: {
@@ -264,9 +334,9 @@ wss.on('connection', (ws, request) => {
                 })
 
                 users.forEach(user =>{
-                    if(user.rooms.includes(roomId)){
+                    if(user.ws !== ws && user.rooms.includes(roomId)){
                         user.ws.send(JSON.stringify({
-                            type: "delete",
+                            type: "confirm-delete",
                             message: shapeIds,
                             roomId: roomId
                         }))
@@ -302,6 +372,7 @@ wss.on('connection', (ws, request) => {
                     try {
                         await prisma.shape.create({
                             data: {
+                                id: shape.id,
                                 userId: userId,
                                 roomId: parseInt(room),
                                 type: shape.type,
@@ -367,10 +438,29 @@ wss.on('connection', (ws, request) => {
                         
                 }
             }
+            else if (lastAction.type === 'move'){
+                const shapeId = lastAction.shapes[0]?.id;
+                const dx = lastAction.dx ?? 0;
+                const dy = lastAction.dy ?? 0;
+
+                if (!shapeId) return;
+
+                try {
+                    await applyMoveToShape(shapeId, -dx, -dy);
+                } catch (error) {
+                    console.error("Undo move failed : ", error)
+                    return;
+                }
+            }
             
+            console.log("undo action")
             console.log(lastAction);
+            console.log("undo Stack Status")
+            console.log(undoStack[room])
+            console.log("redo Stack Status")
+            console.log(redoStack[room])
             users.forEach(user =>{
-                if(user.rooms.includes(room)){
+                if(user.ws !== ws && user.rooms.includes(room)){
                     user.ws.send(JSON.stringify({
                         type: "undo",
                         message: lastAction,
@@ -389,6 +479,7 @@ wss.on('connection', (ws, request) => {
 
             pushToStack(undoStack, room, reverseActionType(redoAction));
 
+            const createdShapes : Shape[] = [];
             if(redoAction.type === 'draw'){
                 await prisma.shape.deleteMany({
                     where: {
@@ -402,8 +493,9 @@ wss.on('connection', (ws, request) => {
                 for (const shape of redoAction.shapes){
                     
                     try {
-                        await prisma.shape.create({
+                        const createdShape = await prisma.shape.create({
                             data: {
+                                id: shape.id,
                                 userId: userId,
                                 roomId: parseInt(room),
                                 type: shape.type,
@@ -463,36 +555,81 @@ wss.on('connection', (ws, request) => {
                                 }
                             }
                         })
+
+                        createdShapes.push(createdShape as Shape);
                     } catch (error) {
                         console.error("Undo error: ", error)
                     }
                         
                 }
             }
+            else if (redoAction.type === 'move'){
+                const shapeId = redoAction.shapes[0]?.id;
+                const dx = redoAction.dx ?? 0;
+                const dy = redoAction.dy ?? 0;
+
+                if (!shapeId) return;
+
+                try {
+                    await applyMoveToShape(shapeId, -dx, -dy);
+                } catch (error) {
+                    console.error("Undo move failed : ", error)
+                    return;
+                }
+            }
             
+            console.log("undo Stack Status")
+            console.log(undoStack[room])
+            console.log("redo Stack Status")
+            console.log(redoStack[room])
             users.forEach(user =>{
-                if(user.rooms.includes(room)){
+                if(user.ws !== ws && user.rooms.includes(room)){
                     user.ws.send(JSON.stringify({
                         type: "redo",
-                        message: redoAction,
+                        message: {
+                            type: redoAction.type,
+                            shapes: createdShapes
+                        },
                         roomId: room
                     }))
                 }
             })
         }
 
-        else if(parsedData.type === "sync") {
+        else if(parsedData.type === "move") {
             const roomId = parsedData.roomId;
-            const newShapes = parsedData.message;
-            // console.log("new Shapes")
-            // console.log(parsedData)
-            // console.log(newShapes)
+            const {shapeId, dx, dy} = parsedData.message;
 
-            users.forEach(user => {
-                if (user.rooms.includes(roomId)) {
+            await applyMoveToShape(shapeId, dx, dy);
+
+            const movedShape = await prisma.shape.findUnique({
+                where: {id: shapeId},
+                include: {
+                    rect: true,
+                    circle: true,
+                    line: true,
+                    pencil: {include: {points: true}}
+                }
+            });
+
+            if (!movedShape) return;
+
+            undoStack[roomId] ||= [];
+                undoStack[roomId].push({
+                type: "move",
+                shapes: [movedShape as Shape],
+                timestamp: Date.now()
+            })
+
+            users.forEach(user =>{
+                if(user.ws !== ws && user.rooms.includes(roomId)){
                     user.ws.send(JSON.stringify({
-                        type: "sync",
-                        message: newShapes,
+                        type: "confirm-move",
+                        message: {
+                            shapeId: shapeId,
+                            dx: dx,
+                            dy: dy
+                        },
                         roomId: roomId
                     }))
                 }

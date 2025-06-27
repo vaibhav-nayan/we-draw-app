@@ -63,7 +63,7 @@ export function Canvas ({roomId, socket} : {
             <IconWrap icon={<Pencil size={20}/>} active={tool === 'PENCIL'} onClick={() => setTool('PENCIL')}/>
             <IconWrap icon={<Eraser size={20}/>} active={tool === 'ERASE'} onClick={() => setTool('ERASE')}/>
         </ToolBar>
-        <canvas className={`${tool==='PTR'?'cursor-grab': 'cursor-crosshair'}`} ref={canvasRef} width={windowSize[0]} height={windowSize[1]}></canvas>
+        <canvas className={``} ref={canvasRef} width={windowSize[0]} height={windowSize[1]}></canvas>
     </div>
     )
 }

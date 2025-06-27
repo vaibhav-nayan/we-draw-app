@@ -12,6 +12,12 @@ export function pushToStack(stack: Record<string, Action[]>, roomId: string, act
 }
 
 export function reverseActionType(action: Action): Action {
+    if(action.type === 'move'){
+        return {
+            ...action,
+            type: "move"
+        }
+    }
     return {
         ...action,
         type: action.type === "draw" ? "delete" : "draw"
