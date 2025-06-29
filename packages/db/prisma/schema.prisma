@@ -45,6 +45,7 @@ model Shape {
   circle Circle? @relation()
   line   Line?   @relation()
   pencil Pencil? @relation()
+  text   Text?   @relation()
 }
 
 enum ShapeType {
@@ -52,6 +53,7 @@ enum ShapeType {
   CIRCLE
   LINE
   PENCIL
+  TEXT
 }
 
 model Rect {
@@ -93,4 +95,12 @@ model Point {
   order   Int
   pencilId  Int
   pencil  Pencil @relation(fields: [pencilId], references: [pencilShapeId], onDelete: Cascade)
+}
+
+model Text {
+  textId Int   @id @default(autoincrement())
+  x      Int
+  y      Int
+  text   String
+  shape  Shape @relation(fields: [textId], references: [id], onDelete: Cascade)
 }

@@ -2,11 +2,11 @@
 import { drawInit } from "@/draw";
 import useSize from "@/hooks/useSize";
 import { useEffect, useRef, useState } from "react";
-import { Square, Circle, Minus, MousePointer2, Hand, Pencil, Eraser } from "lucide-react";
+import { Square, Circle, Minus, MousePointer2, Hand, Pencil, Eraser, Type } from "lucide-react";
 import { IconWrap } from "./IconWrap";
 import { Game } from "@/draw/Game";
 
-export type ToolType = "PTR" | "RECT" | "CIRCLE" | "LINE" | "SELECT" | "PENCIL" | "ERASE";
+export type ToolType = "PTR" | "RECT" | "CIRCLE" | "LINE" | "SELECT" | "PENCIL" | "ERASE" | "TEXT";
 
 export function Canvas ({roomId, socket} : {
     roomId : string,
@@ -60,10 +60,11 @@ export function Canvas ({roomId, socket} : {
             <IconWrap icon={<Square size={20}/>} active={tool === 'RECT'} onClick={() => setTool('RECT')}/>
             <IconWrap icon={<Circle size={20}/>} active={tool === 'CIRCLE'} onClick={() => setTool('CIRCLE')}/>
             <IconWrap icon={<Minus size={20}/>} active={tool === 'LINE'} onClick={() => setTool('LINE')}/>
+            <IconWrap icon={<Type size={20}/>} active={tool === 'TEXT'} onClick={() => setTool('TEXT')}/>
             <IconWrap icon={<Pencil size={20}/>} active={tool === 'PENCIL'} onClick={() => setTool('PENCIL')}/>
             <IconWrap icon={<Eraser size={20}/>} active={tool === 'ERASE'} onClick={() => setTool('ERASE')}/>
         </ToolBar>
-        <canvas className={``} ref={canvasRef} width={windowSize[0]} height={windowSize[1]}></canvas>
+        <canvas className={`relative`} ref={canvasRef} width={windowSize[0]} height={windowSize[1]}></canvas>
     </div>
     )
 }

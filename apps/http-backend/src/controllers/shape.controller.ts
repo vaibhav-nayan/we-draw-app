@@ -20,7 +20,8 @@ export const getShapes = async (req : Request, res: Response) =>{
                 line: true,
                 pencil: {
                     include : {points : true}
-                }
+                },
+                text: true
             }
         })
         // console.log(shapes)
@@ -64,6 +65,17 @@ export const getShapes = async (req : Request, res: Response) =>{
                 type : "PENCIL",
                 pencil : {
                     points : shape.pencil.points
+                }
+            }
+        }
+        else if(shape.type === "TEXT" && shape.text) {
+            return {
+                id: shape.id,
+                type : "TEXT",
+                text: {
+                    x: shape.text.x,
+                    y: shape.text.y,
+                    text: shape.text.text
                 }
             }
         }

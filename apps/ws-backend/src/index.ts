@@ -44,6 +44,16 @@ export type Shape = {
         }[]
     }
     selected? : boolean
+} | {
+    id: number
+    type: "TEXT"
+    text: {
+        x: number;
+        y: number;
+        text: string;
+    }
+    clientId? : string
+    selected? : boolean
 }
 
 export type Action = {
@@ -93,7 +103,8 @@ async function applyMoveToShape(shapeId: number, dx: number, dy: number) {
             rect: true,
             circle: true,
             line: true,
-            pencil: {include: {points: true}}
+            pencil: {include: {points: true}},
+            text: true
         }
     });
 
@@ -145,6 +156,16 @@ async function applyMoveToShape(shapeId: number, dx: number, dy: number) {
             ...updates
         ]);
     }
+
+    else if(shape.type === 'TEXT' && shape.text) {
+        await prisma.text.update({
+            where: {textId: shapeId},
+            data: {
+                x: shape.text.x + dx,
+                y: shape.text.y + dy
+            }
+        })
+    }
 }
 
 const users : User[] = [];
@@ -179,7 +200,7 @@ wss.on('connection', (ws, request) => {
             redoStack[parsedData.roomId] ||= [];
         }
 
-        if(parsedData.type === "leave_room"){
+        else if(parsedData.type === "leave_room"){
             const user = users.find(x => x.ws === ws);
             if( !user) {
                 return;
@@ -187,11 +208,11 @@ wss.on('connection', (ws, request) => {
             user.rooms = user?.rooms.filter(x =>x !== parsedData.room)
         }
 
-        if(parsedData.type === "draw"){
+        else if(parsedData.type === "draw"){
             const roomId = parsedData.roomId;
             const shape = parsedData.message
             console.log("Shape Creating Log")
-            // console.log(shape)
+            console.log(shape)
 
             const newShape = await prisma.shape.create({
                 data: {
@@ -241,6 +262,15 @@ wss.on('connection', (ws, request) => {
                                 }
                             }
                         }
+                    }),
+                    ...(shape.type === "TEXT" && {
+                        text: {
+                            create: {
+                                x: shape.text.x,
+                                y: shape.text.y,
+                                text: shape.text.text
+                            }
+                        }
                     })
                 },
                 include: {
@@ -251,7 +281,8 @@ wss.on('connection', (ws, request) => {
                         include  :{
                             points : true
                         }
-                    }
+                    },
+                    text: true
                 }
             })
 
@@ -307,7 +338,8 @@ wss.on('connection', (ws, request) => {
                             include  :{
                                 points : true
                             }
-                        }
+                        },
+                        text: true
                     }
                 });
 
@@ -419,6 +451,15 @@ wss.on('connection', (ws, request) => {
                                             }
                                         }
                                     }
+                                }),
+                                ...(shape.type === "TEXT" && {
+                                    text: {
+                                        create: {
+                                            x: shape.text.x,
+                                            y: shape.text.y,
+                                            text: shape.text.text
+                                        }
+                                    }
                                 })
                             },
                             include: {
@@ -429,7 +470,8 @@ wss.on('connection', (ws, request) => {
                                     include  :{
                                         points : true
                                     }
-                                }
+                                },
+                                text: true
                             }
                         })
                     } catch (error) {
@@ -540,6 +582,15 @@ wss.on('connection', (ws, request) => {
                                                 }))
                                                 }
                                             }
+                                        }
+                                    }
+                                }),
+                                ...(shape.type === "TEXT" && {
+                                    text: {
+                                        create: {
+                                            x: shape.text.x,
+                                            y: shape.text.y,
+                                            text: shape.text.text
                                         }
                                     }
                                 })

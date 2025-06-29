@@ -11,7 +11,7 @@ export function IconWrap ({
     className?: string
 }){
     return (
-        <div className={` ${active? 'bg-neutral-700' : 'bg-neutral-800'} p-2 rounded-lg hover:bg-neutral-700 
+        <div className={` ${active? 'bg-cyan-600 opacity-80' : 'bg-neutral-800'} p-2 rounded-lg hover:bg-neutral-700 
             hover:drop-shadow-sm duration-300 hover:cursor-pointer ${className}`}
             onClick={onClick}>
                 {icon}

@@ -50,6 +50,16 @@ export type Shape = {
     }
     clientId? : string
     selected? : boolean
+} | {
+    id?: number
+    type: "TEXT"
+    text: {
+        x: number;
+        y: number;
+        text: string;
+    }
+    clientId? : string
+    selected? : boolean
 }
 
 export type Action = {
@@ -92,6 +102,12 @@ export class Game {
         startY : 0,
         original: null as Shape | null
     }
+    private isResizing : boolean = false
+    private resizeStartMouse : {x: number, y: number} = {x: 0, y: 0}
+    private resizeShape : Shape | null = null
+    private resizeHandleIndex : number | null = null
+    private originalDimensions : any = null
+    private originalShapeState : any = null
 
     private applyMoveLocally(shapeId: number, dx: number, dy: number) {
         console.log("applyMoveLocally reached")
@@ -116,6 +132,9 @@ export class Game {
             point.x += dx;
             point.y += dy;
             });
+        } else if(shape.type === "TEXT" && shape.text) {
+            shape.text.x += dx;
+            shape.text.y += dy;
         }
 
         this.clearCanvas(); 
@@ -240,6 +259,49 @@ export class Game {
         }));
     }
 
+    private getSelectedShapeUnderCursor(x: number, y: number): Shape | null {
+        for (const shape of this.existingShapes) {
+            if (!shape.selected) continue;
+            const { rx, ry, rw, rh } = this.getBoundingBoxFromShape(shape);
+            if (x >= rx && x <= rx + rw && y >= ry && y <= ry + rh) {
+                return shape;
+            }
+        }
+        return null;
+    }
+
+    private getDeltaFromOriginal(x: number, y: number, startX: number, startY: number) {
+        const dx = (x - startX) / this.scale;
+        const dy = (y - startY) / this.scale;
+        return { dx, dy };
+    }
+
+    private getHandleIndexAtCursor(x: number, y: number): number | null {
+        const handleSize = 8;
+        const half = handleSize / 2;
+
+        for (const shape of this.existingShapes) {
+            if (!shape.selected) continue;
+            const { rx, ry, rw, rh } = this.getBoundingBoxFromShape(shape);
+            const handles = [
+                { x: rx,         y: ry },         // TL
+                { x: rx + rw,    y: ry },         // TR
+                { x: rx,         y: ry + rh },    // BL
+                { x: rx + rw,    y: ry + rh }     // BR
+            ];
+
+            for (let i = 0; i < handles.length; i++) {
+                const h = handles[i];
+                if (x >= h.x - half && x <= h.x + half && y >= h.y - half && y <= h.y + half) {
+                    return i;
+                }
+            }
+        }
+
+        return null;
+    }
+
+
     private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number) : boolean {
         const A = px - x1, B = py -y1;
         const C = x2 - x1, D = y2 - y1;
@@ -274,8 +336,6 @@ export class Game {
         return (yReal + this.offsetY) * this.scale;
     }
 
-    
-
     private toRealX(xVirtual : number) : number {
         return xVirtual / this.scale - this.offsetX;
     }
@@ -283,8 +343,6 @@ export class Game {
     private toRealY(yVirtual : number) : number {
         return yVirtual / this.scale - this.offsetY;
     }
-
-    
 
     private vitualHeight () : number {
         return this.canvas.clientHeight / this.scale;
@@ -492,6 +550,7 @@ export class Game {
         }
         else if(tool === 'PENCIL') this.canvas.style.cursor = `url(${pencilSVGUrl}) 0 16, auto`;
         else if(tool === 'SELECT') this.canvas.style.cursor = `url(${selectSVGUrl}) 0 0, auto`;
+        else if(tool === "TEXT") this.canvas.style.cursor = 'text';
         else this.canvas.style.cursor = 'crosshair'; 
     }
 
@@ -732,9 +791,37 @@ export class Game {
                     corners.forEach(c => this.ctx.fillRect(c.x - half, c.y - half, handleSize, handleSize));
                 }
             }
+            else if(shape.type === 'TEXT') {
+                this.ctx.fillStyle = "white";
+                this.ctx.textBaseline = "top";
+                this.ctx.font = `${14*this.scale}px Arial`;
+                const { x, y, text } = shape.text;
+                this.ctx.fillText(text, this.toVirtualX(x), this.toVirtualY(y));
+
+                if(shape.selected){
+                    const { x, y, text } = shape.text;
+                    const vx = this.toVirtualX(x);
+                    const vy = this.toVirtualY(y);
+                    const textMetrics = this.ctx.measureText(text);
+                    const vw = textMetrics.width;
+                    const vh = 14*this.scale;
+                    this.ctx.lineWidth = 0.5;
+                    this.ctx.strokeStyle = 'rgb(0, 188, 212)';
+                    this.ctx.strokeRect(vx, vy, vw, vh);
+
+                    const handleSize = 8, half = handleSize / 2;
+                    const corners = [
+                        { x: vx,         y: vy },
+                        { x: vx + vw,    y: vy },
+                        { x: vx,         y: vy + vh },
+                        { x: vx + vw,    y: vy + vh }
+                    ];
+                    this.ctx.fillStyle = 'rgb(0, 188, 212)';
+                    corners.forEach(c => this.ctx.fillRect(c.x - half, c.y - half, handleSize, handleSize));
+                }
+            }
         })
     }
-
     
     mouseDownHandler = (e : MouseEvent) => {
         this.clicked = true;
@@ -778,6 +865,64 @@ export class Game {
         }
         else if(this.tool === 'ERASE'){
             this.eraserPoints = [];
+        }
+        else if(this.tool === 'TEXT'){
+            this.canvas.style.cursor = 'default';
+            console.log("reached")
+            setTimeout(() => {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.style.position = 'absolute';
+                input.style.left = `${e.clientX-2}px`;
+                input.style.top = `${e.clientY-4}px`;
+                input.style.zIndex = '1000';
+                input.style.font = '14px Arial';
+                input.style.color = 'white';
+                input.style.outline = 'none';
+                input.style.background = 'transparent';
+                input.style.width = '2ch';
+                input.style.minWidth='2ch';
+                input.style.padding = '2px';
+
+                document.body.appendChild(input);
+                input.focus();
+
+                input.addEventListener('mousedown', (e) => e.stopPropagation());
+                input.onkeydown = (e) =>{
+                    if(e.key === 'Escape'){
+                        input.blur();
+                    }
+                }
+                input.addEventListener('input', () =>{
+                    input.style.width = `${input.value.length+1}ch`;
+                })
+                input.addEventListener('blur', () => {
+                    const textValue = input.value;
+                    if (textValue.trim() !== '') {
+                        const shape: Shape = {
+                            type: 'TEXT',
+                            text: {
+                                x: this.toRealX(e.clientX),
+                                y: this.toRealY(e.clientY),
+                                text: textValue
+                            }
+                        };
+
+                        const clientId = crypto.randomUUID();
+                        this.socket.send(JSON.stringify({
+                            type: "draw",
+                            message: {
+                                ...shape,
+                                clientId
+                            },
+                            roomId: this.roomId
+                        }));
+                        this.existingShapes.push({...shape, clientId})
+                        this.clearCanvas();
+                    }
+                    input.remove();
+                });
+            }, 10);
         }
     }
 
@@ -896,6 +1041,10 @@ export class Game {
                                 y : p.y + dy
                             }));
                         }
+                        else if(shape.type === 'TEXT' && original.type === 'TEXT') {
+                            shape.text.x = original.text.x + dx;
+                            shape.text.y = original.text.y + dy;
+                        }
 
                         this.clearCanvas();
                     }
@@ -936,6 +1085,16 @@ export class Game {
                                 shapeStartY = Math.min(...ys);
                                 shapeEndX = Math.max(...xs);
                                 shapeEndY = Math.max(...ys);
+                            }
+                            else if(shape.type === 'TEXT'){
+                                if(shape.text === undefined) return;
+                                shapeStartX = shape.text.x;
+                                shapeStartY = shape.text.y;
+                                const text = shape.text.text;
+                                const width = this.ctx.measureText(text).width;
+                                const height = this.ctx.measureText(text).actualBoundingBoxAscent + this.ctx.measureText(text).actualBoundingBoxDescent;
+                                shapeEndX = shape.text.x + width;
+                                shapeEndY = shape.text.y + height;
                             }
                             const trueSelectStartX = this.toRealX(this.startX);
                             const trueSelectStartY = this.toRealY(this.startY);
@@ -985,6 +1144,9 @@ export class Game {
                             }
                         })
                     }
+                }
+                else if(this.tool === 'TEXT') {
+                    return;
                 }
                 else {
                     this.canvas.style.cursor = 'grabbing';
@@ -1087,6 +1249,19 @@ export class Game {
                             break;
                         }
                     }
+                    else if(shape.type === 'TEXT'){
+                        const {x, y, text} = shape.text;
+                        this.ctx.font = '14px Arial'; 
+                        const textMetrics = this.ctx.measureText(text);
+                        const width = textMetrics.width;
+                        const height = 14;
+                        if(ex >= x - eraserRadius && ex <= x + width + eraserRadius &&
+                            ey >= y - eraserRadius && ey <= y + height + eraserRadius
+                        ) {
+                            shouldErase = true;
+                            break;
+                        }
+                    }
                 }
 
                 if (shouldErase) {
@@ -1144,6 +1319,9 @@ export class Game {
                 }else if (shape.type === 'PENCIL' && original.type==='PENCIL') {
                     dx = shape.pencil.points[0].x - original.pencil.points[0].x;
                     dy = shape.pencil.points[0].y - original.pencil.points[0].y;
+                }else if(shape.type === 'TEXT' && original.type === 'TEXT') {
+                    dx = shape.text.x - original.text.x;
+                    dy = shape.text.y - original.text.y;
                 }
 
                 if (dx === 0 && dy === 0) {
@@ -1183,6 +1361,9 @@ export class Game {
                 console.log(trueStartX, trueStartY, trueEndX, trueEndY)
                 this.clearCanvas();
             }
+        }
+        else if (this.tool === 'TEXT') {
+            return;
         }
         else {
             this.canvas.style.cursor = 'grab';
