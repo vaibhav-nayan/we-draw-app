@@ -102,5 +102,6 @@ model Text {
   x      Int
   y      Int
   text   String
+  fontSize Float
   shape  Shape @relation(fields: [textId], references: [id], onDelete: Cascade)
 }

@@ -51,13 +51,14 @@ export type Shape = {
         x: number;
         y: number;
         text: string;
+        fontSize: number
     }
     clientId? : string
     selected? : boolean
 }
 
 export type Action = {
-    type : "draw" | "delete"| "move",
+    type : "draw" | "delete"| "move" | "resize",
     dx? : number,
     dy? : number,
     shapes: Shape[],
@@ -111,33 +112,45 @@ async function applyMoveToShape(shapeId: number, dx: number, dy: number) {
     if (!shape) return;
 
     if (shape.type === 'RECT' && shape.rect) {
-        await prisma.rect.update({
-            where: {rectId: shapeId},
+        await prisma.shape.update({
+            where: {id: shapeId},
             data: {
-                x: shape.rect.x + dx,
-                y: shape.rect.y + dy
+                rect: {
+                    update: {
+                        x: shape.rect.x + dx,
+                        y: shape.rect.y + dy
+                    }
+                }
             }
         })
     }
 
     else if (shape.type === 'CIRCLE' && shape.circle) {
-        await prisma.circle.update({
-            where: {circleId: shapeId},
+        await prisma.shape.update({
+            where: {id: shapeId},
             data: {
-                x: shape.circle.x + dx,
-                y: shape.circle.y + dy
+                circle: {
+                    update: {
+                        x: shape.circle.x + dx,
+                        y: shape.circle.y + dy
+                    }
+                }
             }
         })
     }
 
     else if (shape.type === 'LINE' && shape.line) {
-        await prisma.line.update({
-            where: {lineId: shapeId},
+        await prisma.shape.update({
+            where: {id: shapeId},
             data: {
-                x1: shape.line.x1 + dx,
-                y1: shape.line.y1 + dy,
-                x2: shape.line.x2 + dx,
-                y2: shape.line.y2 + dy
+                line: {
+                    update: {
+                        x1: shape.line.x1 + dx,
+                        y1: shape.line.y1 + dy,
+                        x2: shape.line.x2 + dx,
+                        y2: shape.line.y2 + dy
+                    }
+                }
             }
         })
     }
@@ -158,11 +171,64 @@ async function applyMoveToShape(shapeId: number, dx: number, dy: number) {
     }
 
     else if(shape.type === 'TEXT' && shape.text) {
+        await prisma.shape.update({
+            where: {id: shapeId},
+            data: {
+                text: {
+                    update: {
+                        x: shape.text.x + dx,
+                        y: shape.text.y + dy
+                    }
+                }
+            }
+        })
+    }
+}
+
+async function applyResizeToShape(shapeId: number, shape: Shape) {
+    if (shape.type === 'RECT' && shape.rect) {
+        await prisma.rect.update({
+            where: {rectId: shapeId},
+            data: {
+                x: shape.rect.x,
+                y: shape.rect.y,
+                width: shape.rect.width,
+                height: shape.rect.height
+            }
+        })
+    }
+
+    else if (shape.type === 'CIRCLE' && shape.circle) {
+        await prisma.circle.update({
+            where: {circleId: shapeId},
+            data: {
+                x: shape.circle.x,
+                y: shape.circle.y,
+                radius: shape.circle.radius
+            }
+        })
+    }
+
+    else if (shape.type === 'LINE' && shape.line) {
+        await prisma.line.update({
+            where: {lineId: shapeId},
+            data: {
+                x1: shape.line.x1,
+                y1: shape.line.y1,
+                x2: shape.line.x2,
+                y2: shape.line.y2
+            }
+        })
+    }
+
+    else if(shape.type === 'TEXT' && shape.text) {
         await prisma.text.update({
             where: {textId: shapeId},
             data: {
-                x: shape.text.x + dx,
-                y: shape.text.y + dy
+                x: shape.text.x,
+                y: shape.text.y,
+                text: shape.text.text,
+                fontSize: shape.text.fontSize
             }
         })
     }
@@ -268,7 +334,8 @@ wss.on('connection', (ws, request) => {
                             create: {
                                 x: shape.text.x,
                                 y: shape.text.y,
-                                text: shape.text.text
+                                text: shape.text.text,
+                                fontSize: shape.text.fontSize
                             }
                         }
                     })
@@ -457,7 +524,8 @@ wss.on('connection', (ws, request) => {
                                         create: {
                                             x: shape.text.x,
                                             y: shape.text.y,
-                                            text: shape.text.text
+                                            text: shape.text.text,
+                                            fontSize: shape.text.fontSize
                                         }
                                     }
                                 })
@@ -481,16 +549,32 @@ wss.on('connection', (ws, request) => {
                 }
             }
             else if (lastAction.type === 'move'){
+                // console.log("received undo move from client")
                 const shapeId = lastAction.shapes[0]?.id;
-                const dx = lastAction.dx ?? 0;
-                const dy = lastAction.dy ?? 0;
+                const dx = lastAction.dx;
+                const dy = lastAction.dy;
 
-                if (!shapeId) return;
+                if (!shapeId || !dx || !dy) return;
 
                 try {
                     await applyMoveToShape(shapeId, -dx, -dy);
                 } catch (error) {
                     console.error("Undo move failed : ", error)
+                    return;
+                }
+            }
+            else if(lastAction.type === "resize"){
+                const shapeId = lastAction.shapes[0]?.id;
+                const newShape = lastAction.shapes[0];
+                const original = lastAction.shapes[1];
+
+                if (!shapeId || !newShape || !original) return;
+
+                try {
+                    await applyResizeToShape(shapeId, newShape);
+                }
+                catch (error) {
+                    console.error("Undo resize failed : ", error)
                     return;
                 }
             }
@@ -590,7 +674,8 @@ wss.on('connection', (ws, request) => {
                                         create: {
                                             x: shape.text.x,
                                             y: shape.text.y,
-                                            text: shape.text.text
+                                            text: shape.text.text,
+                                            fontSize: shape.text.fontSize
                                         }
                                     }
                                 })
@@ -613,16 +698,81 @@ wss.on('connection', (ws, request) => {
                     }
                         
                 }
+                users.forEach(user =>{
+                    if(user.ws !== ws && user.rooms.includes(room)){
+                        user.ws.send(JSON.stringify({
+                            type: "redo",
+                            message: {
+                                type: redoAction.type,
+                                shapes: createdShapes,
+                            },
+                            roomId: room
+                        }))
+                    }
+                })
+                return;
             }
             else if (redoAction.type === 'move'){
+                console.log("redo move called")
                 const shapeId = redoAction.shapes[0]?.id;
                 const dx = redoAction.dx ?? 0;
                 const dy = redoAction.dy ?? 0;
-
+                console.log("Action : ", shapeId, dx, dy)
                 if (!shapeId) return;
+                const shape = await prisma.shape.findUnique({
+                    where: {
+                        id: shapeId
+                    },
+                    include: {
+                        rect: true,
+                        circle: true,
+                        line: true,
+                        pencil: {
+                            include  :{
+                                points : true
+                            }
+                        },
+                        text: true
+                    }
+                })
+
+                if (!shape) return;
+                console.log("Before Redo Move Shape : ", shape.rect)
 
                 try {
                     await applyMoveToShape(shapeId, -dx, -dy);
+                } catch (error) {
+                    console.error("Undo move failed : ", error)
+                    return;
+                }
+                const movedShape = await prisma.shape.findUnique({
+                    where: {
+                        id: shapeId
+                    },
+                    include: {
+                        rect: true,
+                        circle: true,
+                        line: true,
+                        pencil: {
+                            include  :{
+                                points : true
+                            }
+                        },
+                        text: true
+                    }
+                })
+                if (!movedShape) return;
+                console.log("After Redo Move Shape : ", movedShape.rect)
+            }
+            else if (redoAction.type === 'resize'){
+                const shapeId = redoAction.shapes[0]?.id;
+                const newShape = redoAction.shapes[0];
+                const original = redoAction.shapes[1];
+
+                if (!shapeId || !newShape || !original) return;
+
+                try {
+                    await applyResizeToShape(shapeId, newShape);
                 } catch (error) {
                     console.error("Undo move failed : ", error)
                     return;
@@ -637,10 +787,7 @@ wss.on('connection', (ws, request) => {
                 if(user.ws !== ws && user.rooms.includes(room)){
                     user.ws.send(JSON.stringify({
                         type: "redo",
-                        message: {
-                            type: redoAction.type,
-                            shapes: createdShapes
-                        },
+                        message: redoAction,
                         roomId: room
                     }))
                 }
@@ -659,16 +806,19 @@ wss.on('connection', (ws, request) => {
                     rect: true,
                     circle: true,
                     line: true,
-                    pencil: {include: {points: true}}
+                    pencil: {include: {points: true}},
+                    text: true
                 }
             });
 
             if (!movedShape) return;
 
             undoStack[roomId] ||= [];
-                undoStack[roomId].push({
+            undoStack[roomId].push({
                 type: "move",
                 shapes: [movedShape as Shape],
+                dx: dx,
+                dy: dy,
                 timestamp: Date.now()
             })
 
@@ -680,6 +830,45 @@ wss.on('connection', (ws, request) => {
                             shapeId: shapeId,
                             dx: dx,
                             dy: dy
+                        },
+                        roomId: roomId
+                    }))
+                }
+            })
+        }
+        else if(parsedData.type === "resize") {
+            const roomId = parsedData.roomId;
+            const {shapeId, shape, original} = parsedData.message;
+
+            await applyResizeToShape(shapeId, shape);
+
+            const resizedShape = await prisma.shape.findUnique({
+                where: {id: shapeId},
+                include: {
+                    rect: true,
+                    circle: true,
+                    line: true,
+                    pencil: {include: {points: true}},
+                    text: true
+                }
+            });
+
+            if (!resizedShape) return;
+
+            undoStack[roomId] ||= [];
+                undoStack[roomId].push({
+                type: "resize",
+                shapes: [original, resizedShape as Shape],
+                timestamp: Date.now()
+            })
+
+            users.forEach(user =>{
+                if(user.ws !== ws && user.rooms.includes(roomId)){
+                    user.ws.send(JSON.stringify({
+                        type: "confirm-resize",
+                        message: {
+                            shapeId: shapeId,
+                            shape: resizedShape
                         },
                         roomId: roomId
                     }))

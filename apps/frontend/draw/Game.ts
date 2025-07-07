@@ -3,7 +3,7 @@ import { ToolType } from "@/components/Canvas";
 
 const selectSVGUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1tb3VzZS1wb2ludGVyMi1pY29uIGx1Y2lkZS1tb3VzZS1wb2ludGVyLTIiPjxwYXRoIGQ9Ik00LjAzNyA0LjY4OGEuNDk1LjQ5NSAwIDAgMSAuNjUxLS42NTFsMTYgNi41YS41LjUgMCAwIDEtLjA2My45NDdsLTYuMTI0IDEuNThhMiAyIDAgMCAwLTEuNDM4IDEuNDM1bC0xLjU3OSA2LjEyNmEuNS41IDAgMCAxLS45NDcuMDYzeiIvPjwvc3ZnPg=="
 const pencilSVGUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1wZW5jaWwtaWNvbiBsdWNpZGUtcGVuY2lsIj48cGF0aCBkPSJNMjEuMTc0IDYuODEyYTEgMSAwIDAgMC0zLjk4Ni0zLjk4N0wzLjg0MiAxNi4xNzRhMiAyIDAgMCAwLS41LjgzbC0xLjMyMSA0LjM1MmEuNS41IDAgMCAwIC42MjMuNjIybDQuMzUzLTEuMzJhMiAyIDAgMCAwIC44My0uNDk3eiIvPjxwYXRoIGQ9Im0xNSA1IDQgNCIvPjwvc3ZnPg=="
-const eraserSVGUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1lcmFzZXItaWNvbiBsdWNpZGUtZXJhc2VyIj48cGF0aCBkPSJNMjEgMjFIOGEyIDIgMCAwIDEtMS40Mi0uNTg3bC0zLjk5NC0zLjk5OWEyIDIgMCAwIDEgMC0yLjgyOGwxMC0xMGEyIDIgMCAwIDEgMi44MjkgMGw1Ljk5OSA2YTIgMiAwIDAgMSAwIDIuODI4TDEyLjgzNCAyMSIvPjxwYXRoIGQ9Im01LjA4MiAxMS4wOSA4LjgyOCA4LjgyOCIvPjwvc3ZnPg=="
+const eraserSVGUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1jaXJjbGUtaWNvbiBsdWNpZGUtY2lyY2xlIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjwvc3ZnPg=="
 
 
 export type Shape = {
@@ -17,6 +17,7 @@ export type Shape = {
     }
     clientId? : string
     selected? : boolean
+    toBeErased? : boolean
 } | {
     id?: number
     type: "CIRCLE"
@@ -27,6 +28,7 @@ export type Shape = {
     }
     clientId? : string
     selected? : boolean
+    toBeErased? : boolean
 } | {
     id?: number
     type: "LINE"
@@ -38,6 +40,7 @@ export type Shape = {
     }
     clientId? : string
     selected? : boolean
+    toBeErased? : boolean
 } | {
     id?: number
     type: "PENCIL",
@@ -50,6 +53,7 @@ export type Shape = {
     }
     clientId? : string
     selected? : boolean
+    toBeErased? : boolean
 } | {
     id?: number
     type: "TEXT"
@@ -57,18 +61,29 @@ export type Shape = {
         x: number;
         y: number;
         text: string;
+        fontSize: number
     }
     clientId? : string
     selected? : boolean
+    toBeErased? : boolean
 }
 
 export type Action = {
-    type : "draw" | "delete" | "move",
+    type : "draw" | "delete" | "move" | "resize",
     dx? : number,
     dy? : number,
     shapes: Shape[],
     userId? : string,
     timestamp : number       
+}
+
+type ActiveTransform = {
+    type : "move" | "resize" | null,
+    shapeId : number | null,
+    handle?: number,
+    startX : number,
+    startY : number,
+    original: Shape | null
 }
 
 export class Game {
@@ -95,19 +110,13 @@ export class Game {
     private MAX_STACK_SIZE : number = 100;
     private undoStack : Record<string, Action[]> = {};
     private redoStack : Record<string, Action[]> = {};
-    private activeTransform = {
-        type : null as "move" | null,
-        shapeId : null as number | null,
+    private activeTransform: ActiveTransform = {
+        type : null,
+        shapeId : null,
         startX : 0,
         startY : 0,
-        original: null as Shape | null
+        original: null
     }
-    private isResizing : boolean = false
-    private resizeStartMouse : {x: number, y: number} = {x: 0, y: 0}
-    private resizeShape : Shape | null = null
-    private resizeHandleIndex : number | null = null
-    private originalDimensions : any = null
-    private originalShapeState : any = null
 
     private applyMoveLocally(shapeId: number, dx: number, dy: number) {
         console.log("applyMoveLocally reached")
@@ -140,6 +149,13 @@ export class Game {
         this.clearCanvas(); 
     }
 
+    private applyResizeLocally(shapeId: number, shape: Shape){
+        const shapeIndex = this.existingShapes.findIndex(s => s.id === shapeId);
+        if (shapeIndex !== -1) {
+            this.existingShapes[shapeIndex] = shape;
+        }
+    }
+
     private saveActionForUndo (stack: Record<string, Action[]> , roomId: string, action: Action){
         if(!stack[roomId]) stack[roomId] = [];
         stack[roomId].push(action)
@@ -151,12 +167,12 @@ export class Game {
 
     private undo = (roomId: string) => {
         const stack = this.undoStack[roomId];
-        console.log("undo Logs")
-        console.log(stack)
+        // console.log("undo Logs")
+        // console.log(stack)
         if(!stack || stack.length === 0) return;
 
         const action = stack.pop();
-        console.log(action)
+        // console.log(action)
         if(!action) return;
 
         // PUSHING INTO REDO STACK
@@ -165,7 +181,21 @@ export class Game {
         }
         if(action.type === 'move'){
             this.redoStack[roomId] = this.redoStack[roomId] || [];
-            this.redoStack[roomId].push(action)
+            this.redoStack[roomId].push({
+                type: "move",
+                shapes: action.shapes,
+                dx: -action.dx!,
+                dy: -action.dy!,
+                timestamp: Date.now()
+            })
+        }
+        else if(action.type === 'resize'){
+            this.redoStack[roomId] = this.redoStack[roomId] || [];
+            this.redoStack[roomId].push({
+                type: "resize",
+                shapes: [action.shapes[1], action.shapes[0]],
+                timestamp: Date.now()
+            })
         }
         else {
             const newAction: Action = {
@@ -185,13 +215,19 @@ export class Game {
         } else if (action.type === "delete") {
             this.existingShapes.push(...action.shapes);
         } else if (action.type === 'move'){
-            console.log("move block reached")
+            // console.log("move block reached")
             const shapeId = action.shapes[0].id;
             const dx = action.dx;
             const dy = action.dy;
-            console.log(shapeId, dx, dy)
+            // console.log(shapeId, dx, dy)
             if(!shapeId || !dx || !dy) return;
             this.applyMoveLocally(shapeId , -dx, -dy)
+        } else if(action.type === 'resize'){
+            const shapeId = action.shapes[0].id;
+            const newShape = action.shapes[0];
+            const original = action.shapes[1];
+            if(!shapeId || !newShape || !original) return;
+            this.applyResizeLocally(shapeId, original)
         }
 
         
@@ -222,8 +258,16 @@ export class Game {
             this.undoStack[roomId].push({
                 type: "move",
                 shapes: action.shapes,
-                dx: action.dx!,
-                dy: action.dy!,
+                dx: -action.dx!,
+                dy: -action.dy!,
+                timestamp: Date.now()
+            })
+        }
+        else if(action.type === 'resize'){
+            this.undoStack[roomId] = this.undoStack[roomId] || [];
+            this.undoStack[roomId].push({
+                type: "resize",
+                shapes: [action.shapes[1], action.shapes[0]],
                 timestamp: Date.now()
             })
         }
@@ -241,13 +285,20 @@ export class Game {
         } else if (action.type === "delete") {
             this.existingShapes.push(...action.shapes);
         } 
-        if (action.type === 'move'){
+        else if (action.type === 'move'){
 
             const shapeId = action.shapes[0].id;
             const dx = action.dx;
             const dy = action.dy;
             if(!shapeId || !dx || !dy) return;
             this.applyMoveLocally(shapeId , -dx, -dy)
+        }
+        else if(action.type === 'resize'){
+            const shapeId = action.shapes[0].id;
+            const newShape = action.shapes[0];
+            const original = action.shapes[1];
+            if(!shapeId || !newShape) return;
+            this.applyResizeLocally(shapeId, original)
         }
 
         this.clearCanvas();
@@ -258,49 +309,6 @@ export class Game {
             roomId : this.roomId
         }));
     }
-
-    private getSelectedShapeUnderCursor(x: number, y: number): Shape | null {
-        for (const shape of this.existingShapes) {
-            if (!shape.selected) continue;
-            const { rx, ry, rw, rh } = this.getBoundingBoxFromShape(shape);
-            if (x >= rx && x <= rx + rw && y >= ry && y <= ry + rh) {
-                return shape;
-            }
-        }
-        return null;
-    }
-
-    private getDeltaFromOriginal(x: number, y: number, startX: number, startY: number) {
-        const dx = (x - startX) / this.scale;
-        const dy = (y - startY) / this.scale;
-        return { dx, dy };
-    }
-
-    private getHandleIndexAtCursor(x: number, y: number): number | null {
-        const handleSize = 8;
-        const half = handleSize / 2;
-
-        for (const shape of this.existingShapes) {
-            if (!shape.selected) continue;
-            const { rx, ry, rw, rh } = this.getBoundingBoxFromShape(shape);
-            const handles = [
-                { x: rx,         y: ry },         // TL
-                { x: rx + rw,    y: ry },         // TR
-                { x: rx,         y: ry + rh },    // BL
-                { x: rx + rw,    y: ry + rh }     // BR
-            ];
-
-            for (let i = 0; i < handles.length; i++) {
-                const h = handles[i];
-                if (x >= h.x - half && x <= h.x + half && y >= h.y - half && y <= h.y + half) {
-                    return i;
-                }
-            }
-        }
-
-        return null;
-    }
-
 
     private isPointNearLine(px: number, py: number, x1: number, y1: number, x2: number, y2: number, tolerance: number) : boolean {
         const A = px - x1, B = py -y1;
@@ -368,75 +376,94 @@ export class Game {
         return yVirtual / this.scale + this.offsetY;
     }
 
-    private getHoveredHandleOrShape(x: number, y: number): { type: 'handle' | 'shape' | 'none', cursor?: string } {
-        const virtualX = this.tooVirtualX(x); // from screen to world
-        const virtualY = this.tooVirtualY(y);
+    private getHoveredHandleOrShape(x: number, y: number): { type: 'handle' | 'shape' | 'none', handle?: number, cursor?: string, shape: Shape | null } {
+
         const handleSize = 8;
-        const half = handleSize / this.scale / 2; // important: adjust for zoom
+        const half = handleSize / this.scale; // important: adjust for zoom
 
         for (const shape of this.existingShapes) {
             if (!shape.selected) continue;
-
+            if(shape.type === 'LINE'){
+                const { rx1, ry1, rx2, ry2 } = this.getBoundingBoxFromLine(shape);
+                if (
+                    x >= rx1 - half && x <= rx1 + half &&
+                    y >= ry1 - half && y <= ry1 + half
+                )
+                {
+                    return { type: 'handle', cursor: 'pointer' , handle: 0, shape: shape };
+                }
+                if (
+                    x >= rx2 - half && x <= rx2 + half &&
+                    y >= ry2 - half && y <= ry2 + half
+                )
+                {
+                    return { type: 'handle', cursor: 'pointer' , handle: 1, shape: shape};
+                }
+                if (
+                    this.isPointNearLine(x, y, rx1, ry1, rx2, ry2, half)
+                )
+                {
+                    return { type: 'shape' , shape: shape };
+                }
+            }
             const { rx, ry, rw, rh } = this.getBoundingBoxFromShape(shape);
 
             const corners = [
-                { x: rx,         y: ry,         cursor: 'nwse-resize' }, // top-left
-                { x: rx + rw,    y: ry,         cursor: 'nesw-resize' }, // top-right
-                { x: rx,         y: ry + rh,    cursor: 'nesw-resize' }, // bottom-left
-                { x: rx + rw,    y: ry + rh,    cursor: 'nwse-resize' }  // bottom-right
+                { x: rx,         y: ry,         cursor: 'nwse-resize' , handle: 0}, // top-left
+                { x: rx + rw,    y: ry,         cursor: 'nesw-resize' , handle: 1}, // top-right
+                { x: rx,         y: ry + rh,    cursor: 'nesw-resize' , handle: 2}, // bottom-left
+                { x: rx + rw,    y: ry + rh,    cursor: 'nwse-resize' , handle: 3}  // bottom-right
             ];
 
             for (const corner of corners) {
                 if (
-                    virtualX >= corner.x - half && virtualX <= corner.x + half &&
-                    virtualY >= corner.y - half && virtualY <= corner.y + half
+                    x >= corner.x - half && x <= corner.x + half &&
+                    y >= corner.y - half && y <= corner.y + half
                 )
                 {
-                    return { type: 'handle', cursor: corner.cursor };
+                    return { type: 'handle', cursor: corner.cursor , handle: corner.handle , shape: shape};
                 }
             }
 
             if (
-                virtualX >= rx && virtualX <= rx + rw &&
-                virtualY >= ry && virtualY <= ry + rh
+                x > rx && x < rx + rw &&
+                y > ry && y < ry + rh
             )
             {
-                return { type: 'shape' };
+                return { type: 'shape', shape: shape };
             }
         }
 
-        return { type: 'none' };
+        return { type: 'none' , shape: null };
     }
 
-
+    private getBoundingBoxFromLine(shape : Shape) : { rx1: number, ry1: number, rx2: number, ry2: number } {
+        if(shape.type === 'LINE' && shape.line) {
+            return {
+                rx1: this.toVirtualX(shape.line.x1),
+                ry1: this.toVirtualX(shape.line.y1),
+                rx2: this.toVirtualX(shape.line.x2),
+                ry2: this.toVirtualX(shape.line.y2),
+            };
+        }
+        return { rx1: 0, ry1: 0, rx2: 0, ry2: 0 };
+    }
     private getBoundingBoxFromShape(shape: Shape): { rx: number, ry: number, rw: number, rh: number } {
         if (shape.type === 'RECT' && shape.rect) {
             return {
-                rx: shape.rect.x,
-                ry: shape.rect.y,
-                rw: shape.rect.width,
-                rh: shape.rect.height
+                rx: this.toVirtualX(shape.rect.x),
+                ry: this.toVirtualY(shape.rect.y),
+                rw: shape.rect.width * this.scale,
+                rh: shape.rect.height * this.scale
             };
         }
         if (shape.type === 'CIRCLE' && shape.circle) {
             const { x, y, radius } = shape.circle;
             return {
-                rx: x - radius,
-                ry: y - radius,
-                rw: radius * 2,
-                rh: radius * 2
-            };
-        }
-        if (shape.type === 'LINE' && shape.line) {
-            const minX = Math.min(shape.line.x1, shape.line.x2);
-            const minY = Math.min(shape.line.y1, shape.line.y2);
-            const maxX = Math.max(shape.line.x1, shape.line.x2);
-            const maxY = Math.max(shape.line.y1, shape.line.y2);
-            return {
-                rx: minX,
-                ry: minY,
-                rw: maxX - minX,
-                rh: maxY - minY
+                rx: this.toVirtualX(x - radius),
+                ry: this.toVirtualY(y - radius),
+                rw: radius * 2 * this.scale,
+                rh: radius * 2 * this.scale
             };
         }
         if (shape.type === 'PENCIL' && shape.pencil.points.length >= 2) {
@@ -447,10 +474,21 @@ export class Game {
             const maxX = Math.max(...xs);
             const maxY = Math.max(...ys);
             return {
-                rx: minX,
-                ry: minY,
-                rw: maxX - minX,
-                rh: maxY - minY
+                rx: this.toVirtualX(minX),
+                ry: this.toVirtualY(minY),
+                rw: maxX - minX * this.scale,
+                rh: maxY - minY * this.scale
+            };
+        }
+        if (shape.type === 'TEXT' && shape.text) {
+            const { x, y } = shape.text;
+            const  width  = (this.ctx.measureText(shape.text.text).width) / this.scale;
+            const height = (this.ctx.measureText(shape.text.text).actualBoundingBoxAscent + this.ctx.measureText(shape.text.text).actualBoundingBoxDescent) / this.scale;
+            return {
+                rx: this.toVirtualX(x),
+                ry: this.toVirtualY(y),
+                rw: width * this.scale,
+                rh: height * this.scale
             };
         }
         return { rx: 0, ry: 0, rw: 0, rh: 0 };
@@ -468,8 +506,8 @@ export class Game {
                 // console.log(shape)
                 const {x: sx, y: sy, width, height} = shape.rect;
                 if(x >= sx && x<= sx+width && y>=sy && y<=sy+height) {
-                    console.log("shape found")
-                    console.log(shape)
+                    // console.log("shape found")
+                    // console.log(shape)
                     return shape;
                 }
             }
@@ -494,6 +532,14 @@ export class Game {
                     if (Math.hypot(point.x - x, point.y - y) <= 5) {
                         return shape;
                     }
+                }
+            }
+            else if(shape.type === 'TEXT'){
+                const {x: tx, y:ty} = shape.text;
+                const width = this.ctx.measureText(shape.text.text).width / this.scale;
+                const height = (this.ctx.measureText(shape.text.text).actualBoundingBoxAscent + this.ctx.measureText(shape.text.text).actualBoundingBoxDescent) / this.scale;
+                if(x >= tx && x<= tx+width && y>=ty && y<=ty+height) {
+                    return shape;
                 }
             }
         }
@@ -546,7 +592,7 @@ export class Game {
         this.tool = tool;
         if(tool === 'PTR') this.canvas.style.cursor = 'grab';
         else if(tool === 'ERASE') {
-            this.canvas.style.cursor = `url(${eraserSVGUrl}) 0 16, auto`;
+            this.canvas.style.cursor = `url(${eraserSVGUrl}) 8 8, auto`;
         }
         else if(tool === 'PENCIL') this.canvas.style.cursor = `url(${pencilSVGUrl}) 0 16, auto`;
         else if(tool === 'SELECT') this.canvas.style.cursor = `url(${selectSVGUrl}) 0 0, auto`;
@@ -618,6 +664,24 @@ export class Game {
                 else if (action.type === 'delete') {
                     this.existingShapes.push(...action.shapes);
                 }
+                else if(action.type === 'move'){
+                    const shapeId = action.shapes[0]?.id;
+                    const dx = action.dx;
+                    const dy = action.dy;
+
+                    if (!shapeId || !dx || !dy) return;
+
+                    this.applyMoveLocally(shapeId, -dx, -dy);
+                }
+                else if(action.type === 'resize'){
+                    const shapeId = action.shapes[0]?.id;
+                    const newShape = action.shapes[0];
+                    const original = action.shapes[1];
+
+                    if (!shapeId || !newShape || !original) return;
+
+                    this.applyResizeLocally(shapeId, newShape);
+                }
 
                 this.clearCanvas();
             }
@@ -646,6 +710,30 @@ export class Game {
                         point.y += dy;
                     });
                 }
+                else if(shape.type === 'TEXT') {
+                    shape.text.x += dx;
+                    shape.text.y += dy;
+                }
+                this.clearCanvas();
+            }
+            else if(message.type === 'confirm-resize') {
+                const {shapeId, shape} = message.message;
+                const originalShape = this.existingShapes.find(s => s.id === shapeId);
+
+                if(!originalShape) return;
+
+                if (originalShape.type === 'RECT') {
+                    originalShape.rect = shape.rect;
+                }
+                else if (originalShape.type === 'CIRCLE') {
+                    originalShape.circle = shape.circle;
+                }
+                else if (originalShape.type === 'LINE') {
+                    originalShape.line = shape.line;
+                }
+                else if(originalShape.type === 'PENCIL') {
+                    originalShape.pencil = shape.pencil;
+                }
                 this.clearCanvas();
             }
         }
@@ -662,6 +750,9 @@ export class Game {
 
         this.existingShapes.forEach(shape =>{
             this.ctx.strokeStyle = 'white';
+            if(shape.toBeErased){
+                this.ctx.strokeStyle = 'gray';
+            }
             this.ctx.lineWidth = 1;
             if(shape.type === 'RECT') {
                 if (shape.rect === undefined) return;
@@ -731,27 +822,20 @@ export class Game {
                 this.ctx.stroke();
 
                 if (shape.selected) {
-                    const minX = Math.min(x1, x2), minY = Math.min(y1, y2);
-                    const maxX = Math.max(x1, x2), maxY = Math.max(y1, y2);
-                    const vx = this.toVirtualX(minX);
-                    const vy = this.toVirtualY(minY);
-                    const vw = (maxX - minX) * this.scale;
-                    const vh = (maxY - minY) * this.scale;
-
-                    this.ctx.lineWidth = 0.5;
+                    const { x1, y1, x2, y2 } = shape.line;
                     this.ctx.strokeStyle = 'rgb(0, 188, 212)';
-                    this.ctx.strokeRect(vx, vy, vw, vh);
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.toVirtualX(x1), this.toVirtualY(y1));
+                    this.ctx.lineTo(this.toVirtualX(x2), this.toVirtualY(y2));
+                    this.ctx.stroke();
 
-                    // Draw corner handles
-                    const handleSize = 8, half = handleSize / 2;
-                    const corners = [
-                        { x: vx,         y: vy },
-                        { x: vx + vw,    y: vy },
-                        { x: vx,         y: vy + vh },
-                        { x: vx + vw,    y: vy + vh }
-                    ];
-                    this.ctx.fillStyle = 'rgb(0, 188, 212)';
-                    corners.forEach(c => this.ctx.fillRect(c.x - half, c.y - half, handleSize, handleSize));
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.toVirtualX(x1), this.toVirtualY(y1), 5, 0, 2 * Math.PI);
+                    this.ctx.stroke();
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.toVirtualX(x2), this.toVirtualY(y2), 5, 0, 2 * Math.PI);
+                    this.ctx.stroke();
                 }
             }
             else if (shape.type === 'PENCIL'){
@@ -794,7 +878,7 @@ export class Game {
             else if(shape.type === 'TEXT') {
                 this.ctx.fillStyle = "white";
                 this.ctx.textBaseline = "top";
-                this.ctx.font = `${14*this.scale}px Arial`;
+                this.ctx.font = `${shape.text.fontSize*this.scale}px Arial`;
                 const { x, y, text } = shape.text;
                 this.ctx.fillText(text, this.toVirtualX(x), this.toVirtualY(y));
 
@@ -804,7 +888,7 @@ export class Game {
                     const vy = this.toVirtualY(y);
                     const textMetrics = this.ctx.measureText(text);
                     const vw = textMetrics.width;
-                    const vh = 14*this.scale;
+                    const vh = (shape.text.fontSize)*this.scale;
                     this.ctx.lineWidth = 0.5;
                     this.ctx.strokeStyle = 'rgb(0, 188, 212)';
                     this.ctx.strokeRect(vx, vy, vw, vh);
@@ -837,13 +921,26 @@ export class Game {
 
         const hoveredShape = this.getShapeAt(realX, realY);
         // console.log(hoveredShape)
-        if (hoveredShape && hoveredShape.selected) {
-            this.activeTransform = {
-                type : "move",
-                shapeId: hoveredShape.id!, 
-                startX : realX,
-                startY : realY,
-                original: this.copyShape(hoveredShape)
+        const hovered = this.getHoveredHandleOrShape(e.clientX, e.clientY);
+        if (hovered.shape && hovered.shape.selected) {
+            if(hovered.type === 'shape'){
+                this.activeTransform = {
+                    type : "move",
+                    shapeId: hovered.shape.id!, 
+                    startX : realX,
+                    startY : realY,
+                    original: this.copyShape(hovered.shape! as Shape)
+                }
+            }
+            else if(hovered.type === 'handle'){
+                this.activeTransform = {
+                    type : "resize",
+                    shapeId: (hovered.shape! as Shape).id!,
+                    handle: hovered.handle, 
+                    startX : realX,
+                    startY : realY,
+                    original: this.copyShape(hovered.shape!)
+                }
             }
         }
         if(e.button === 1){
@@ -852,8 +949,9 @@ export class Game {
             e.preventDefault()
         }
         if(this.tool === 'SELECT'){
-            this.existingShapes.forEach(shape => {
-                shape.selected = false;
+            const hovered = this.getHoveredHandleOrShape(e.clientX, e.clientY);
+            this.existingShapes.forEach(s => {
+                if(s != hovered.shape) s.selected = false
             })
         }
         else if (this.tool === 'PENCIL'){
@@ -904,7 +1002,8 @@ export class Game {
                             text: {
                                 x: this.toRealX(e.clientX),
                                 y: this.toRealY(e.clientY),
-                                text: textValue
+                                text: textValue,
+                                fontSize: 14
                             }
                         };
 
@@ -931,17 +1030,23 @@ export class Game {
         this.cursorY = e.pageY;
 
         if(this.tool === 'SELECT'){
-            const virtualX = this.toVirtualX(e.clientX);
-            const virtualY = this.toVirtualY(e.clientY);
-
-            const hovered = this.getHoveredHandleOrShape(virtualX, virtualY);
-            if (hovered.type === 'handle') {
-                this.canvas.style.cursor = hovered.cursor!;
-            } else if (hovered.type === 'shape') {
-                this.canvas.style.cursor = 'move';
+            if(this.middleMouseDown){
+                this.offsetX += ((this.cursorX - this.prevCursorX) / this.scale);
+                this.offsetY += ((this.cursorY - this.prevCursorY) / this.scale);
+                this.clearCanvas();
+                this.prevCursorX = e.pageX;
+                this.prevCursorY = e.pageY;
             }
             else {
-                this.canvas.style.cursor = `url(${selectSVGUrl}) 0 0, auto`;
+                const hovered = this.getHoveredHandleOrShape(e.clientX, e.clientY);
+                if (hovered.type === 'handle') {
+                    this.canvas.style.cursor = hovered.cursor!;
+                } else if (hovered.type === 'shape') {
+                    this.canvas.style.cursor = 'move';
+                }
+                else {
+                    this.canvas.style.cursor = `url(${selectSVGUrl}) 0 0, auto`;
+                }
             }
         }
         
@@ -966,13 +1071,19 @@ export class Game {
             else if(this.tool === 'ERASE'){
                 const realX = this.toRealX(e.clientX);
                 const realY = this.toRealY(e.clientY)
+                const currrentShape = this.getShapeAt(realX, realY);
+
+                if(currrentShape) {
+                    currrentShape.toBeErased = true;
+                }
                 this.eraserPoints.push({x: realX, y: realY});
 
                 this.clearCanvas();
 
                 this.ctx.save();
                 this.ctx.setLineDash([5, 5]);
-                this.ctx.strokeStyle = 'red';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeStyle = 'gray';
                 this.ctx.beginPath();
 
                 for(let i=0; i< this.eraserPoints.length; i++){
@@ -1048,6 +1159,127 @@ export class Game {
 
                         this.clearCanvas();
                     }
+                    else if(this.activeTransform.type === "resize") {
+                        
+                        const realX = this.toRealX(e.clientX);
+                        const realY = this.toRealY(e.clientY);
+                        const dx = realX - this.activeTransform.startX;
+                        const dy = realY - this.activeTransform.startY;
+
+                        const shape = this.existingShapes.find(s => s.id === this.activeTransform.shapeId);
+                        if (!shape) return;
+
+                        const original : Shape = this.activeTransform.original as Shape;
+
+                        if (shape.type === 'RECT' && original.type === 'RECT') {
+                            if(this.activeTransform.handle === 0){
+                                shape.rect.x = original.rect.x + dx;
+                                shape.rect.y = original.rect.y + dy;
+                                shape.rect.width = original.rect.width - dx;
+                                shape.rect.height = original.rect.height - dy;
+                            }
+                            else if(this.activeTransform.handle === 1){
+                                shape.rect.y = original.rect.y + dy;
+                                shape.rect.width = original.rect.width + dx;
+                                shape.rect.height = original.rect.height - dy;
+                            }
+                            else if(this.activeTransform.handle === 2){
+                                shape.rect.x = original.rect.x + dx;
+                                shape.rect.width = original.rect.width - dx;
+                                shape.rect.height = original.rect.height + dy;
+                            }
+                            else if(this.activeTransform.handle === 3){
+                                shape.rect.width = original.rect.width + dx;
+                                shape.rect.height = original.rect.height + dy;
+                            }
+                        } 
+                        else if (shape.type === 'CIRCLE' && original.type === 'CIRCLE') {
+                            shape.circle.radius = original.circle.radius + Math.sqrt(dx * dx + dy * dy);
+                        }
+                        else if(shape.type === "LINE" && original.type === 'LINE') {
+                            if(this.activeTransform.handle === 0) {
+                                shape.line.x1 = original.line.x1 + dx;
+                                shape.line.y1 = original.line.y1 + dy;
+                            }
+                            else if(this.activeTransform.handle === 1) {
+                                shape.line.x2 = original.line.x2 + dx;
+                                shape.line.y2 = original.line.y2 + dy;
+                            }
+                        }
+                        else if(shape.type === 'PENCIL' && original.type === 'PENCIL') {
+
+                            alert("PENCIL RESIZE NOT SUPPORTED");
+                            return;
+
+                            /*
+                            const bbox = this.getBoundingBoxFromShape(original);
+
+                            let originX: number;
+                            let originY: number;
+                            let newWidth: number;
+                            let newHeight: number;
+
+                            switch (this.activeTransform.handle) {
+                                case 0:
+                                    originX = bbox.rx + bbox.rw;
+                                    originY = bbox.ry + bbox.rh;
+                                    newWidth = bbox.rw - dx;
+                                    newHeight = bbox.rh - dy;
+                                    break;
+                                case 1:
+                                    originX = bbox.rx;
+                                    originY = bbox.ry + bbox.rh;
+                                    newWidth = bbox.rw + dx;
+                                    newHeight = bbox.rh - dy;
+                                    break;
+                                case 2:
+                                    originX = bbox.rx;
+                                    originY = bbox.ry;
+                                    newWidth = bbox.rw + dx;
+                                    newHeight = bbox.rh + dy;
+                                    break;
+                                case 3:
+                                    originX = bbox.rx + bbox.rw;
+                                    originY = bbox.ry;
+                                    newWidth = bbox.rw - dx;
+                                    newHeight = bbox.rh + dy;
+                                    break;
+                                default:
+                                    originX = bbox.rx;
+                                    originY = bbox.ry;
+                                    newWidth = bbox.rw;
+                                    newHeight = bbox.rh;
+                                    break;
+                            }
+
+                            const scaleX = newWidth / Math.max(bbox.rw, 1);
+                            const scaleY = newHeight / Math.max(bbox.rh, 1);
+
+                            const resizedPoints = original.pencil.points.map(point => ({
+                                x: originX + (point.x - originX) * scaleX,
+                                y: originY + (point.y - originY) * scaleY,
+                                order: point.order
+                            }))
+                            
+                            shape.pencil.points = resizedPoints;
+                            */
+                        }
+                        else if(shape.type === 'TEXT' && original.type === 'TEXT') {
+                            const oldText = original.text;
+                            const width = this.ctx.measureText(oldText.text).width;
+                            const height = this.ctx.measureText(oldText.text).actualBoundingBoxAscent + this.ctx.measureText(oldText.text).actualBoundingBoxDescent;
+
+                            const newHeight = height + Math.abs(dy);
+                            const newWidth = width + Math.abs(dx);
+                            const scaleY = newHeight / height;
+                            const scaleX = newWidth / width;
+
+                            const newFontSize = oldText.fontSize * Math.max(scaleX, scaleY);
+
+                            shape.text.fontSize = newFontSize;
+                        }
+                        this.clearCanvas();
+                    }
                     else {
                         this.ctx.setLineDash([5, 5]);
                         this.ctx.strokeRect(this.startX, this.startY, width, height);
@@ -1091,8 +1323,8 @@ export class Game {
                                 shapeStartX = shape.text.x;
                                 shapeStartY = shape.text.y;
                                 const text = shape.text.text;
-                                const width = this.ctx.measureText(text).width;
-                                const height = this.ctx.measureText(text).actualBoundingBoxAscent + this.ctx.measureText(text).actualBoundingBoxDescent;
+                                const width = this.ctx.measureText(text).width / this.scale;
+                                const height = (this.ctx.measureText(text).actualBoundingBoxAscent + this.ctx.measureText(text).actualBoundingBoxDescent) / this.scale;
                                 shapeEndX = shape.text.x + width;
                                 shapeEndY = shape.text.y + height;
                             }
@@ -1107,35 +1339,6 @@ export class Game {
                                 shapeStartY >= trueSelectStartY &&
                                 shapeEndY <= trueSelectEndY
                             ) {
-                                // Compute virtual coords and dimensions
-                                const vx = this.toVirtualX(shapeStartX);
-                                const vy = this.toVirtualY(shapeStartY);
-                                const vwidth = (shapeEndX - shapeStartX) * this.scale;
-                                const vheight = (shapeEndY - shapeStartY) * this.scale;
-
-                                // Draw dashed bounding box
-                                this.ctx.strokeStyle = 'rgb(0, 188, 212)';
-                                this.ctx.lineWidth = 0.8;
-                                this.ctx.setLineDash([4, 2]);
-                                this.ctx.strokeRect(vx, vy, vwidth, vheight);
-                                this.ctx.setLineDash([]);
-
-                                // Draw corner handles
-                                const handleSize = 8;
-                                const half = handleSize / 2;
-                                const corners = [
-                                    { x: vx,             y: vy },               // top-left
-                                    { x: vx + vwidth,    y: vy },               // top-right
-                                    { x: vx,             y: vy + vheight },     // bottom-left
-                                    { x: vx + vwidth,    y: vy + vheight }      // bottom-right
-                                ];
-
-                                this.ctx.fillStyle = 'rgb(0, 188, 212)';
-                                for (const corner of corners) {
-                                    this.ctx.fillRect(corner.x - half, corner.y - half, handleSize, handleSize);
-                                }
-
-                                // Mark shape as selected
                                 shape.selected = true;
                             }
                             else {
@@ -1218,7 +1421,7 @@ export class Game {
 
             for(const shape of this.existingShapes) {
                 let shouldErase =  false;
-
+                shape.toBeErased = false;
                 for(const {x : ex, y: ey} of this.eraserPoints) {
                     if(shape.type === 'PENCIL'){
                         if(shape.pencil.points.some(p => Math.hypot(p.x - ex, p.y - ey) <= eraserRadius)){
@@ -1335,6 +1538,7 @@ export class Game {
                     return;
                 }
 
+                // console.log("Sending to server")
                 this.socket.send(JSON.stringify({
                     type: "move",
                     message: {shapeId: shape.id, dx: dx, dy: dy},
@@ -1356,6 +1560,37 @@ export class Game {
                     original: null
                 }
                 this.clearCanvas()
+            }
+            else if(this.activeTransform.type === 'resize' && this.activeTransform.shapeId) {
+
+                const finalShape = this.existingShapes.find(s => s.id === this.activeTransform.shapeId);
+                const original = this.activeTransform.original;
+                if(!finalShape || !original) return;
+                if(finalShape){
+                    this.socket.send(JSON.stringify({
+                        type: "resize",
+                        message: {
+                            shapeId: finalShape.id,
+                            shape : finalShape,
+                            original: original
+                        },
+                        roomId: this.roomId
+                    }))
+                    this.saveActionForUndo(this.undoStack, this.roomId, {
+                        type: "resize",
+                        shapes: [this.copyShape(finalShape), this.copyShape(original)],
+                        timestamp: Date.now()
+                    })
+                    this.activeTransform = {
+                        type: null,
+                        shapeId: null,
+                        startX: 0,
+                        startY: 0,
+                        original: null
+                    }
+                }
+
+                
             }
             else {
                 console.log(trueStartX, trueStartY, trueEndX, trueEndY)
@@ -1385,7 +1620,6 @@ export class Game {
     }
 
     mouseWheelHandler = (e : WheelEvent) => {
-        console.log("Mouse scroll happened")
         const deltaY = e.deltaY;
         const scaleAmount = -deltaY / 500;
         this.scale = this.scale * (1+scaleAmount);;
@@ -1413,17 +1647,17 @@ export class Game {
 
         if(ctrlKey && e.key === 'z' && !shiftKey) {
             this.undo(this.roomId);
-            console.log("Stacks")
-            console.log(this.undoStack)
-            console.log(this.redoStack)
+            // console.log("Stacks")
+            // console.log(this.undoStack)
+            // console.log(this.redoStack)
             e.preventDefault();
         }
 
         if (ctrlKey && e.key === "Z" && shiftKey) {
             this.redo(this.roomId);
-            console.log("Stacks")
-            console.log(this.undoStack)
-            console.log(this.redoStack)
+            // console.log("Stacks")
+            // console.log(this.undoStack)
+            // console.log(this.redoStack)
             e.preventDefault();
         }
     }

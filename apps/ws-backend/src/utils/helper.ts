@@ -1,4 +1,4 @@
-import { Action } from "../index";
+import { Action, Shape } from "../index";
 
 const MAX_STACK_SIZE = 100;
 
@@ -15,7 +15,18 @@ export function reverseActionType(action: Action): Action {
     if(action.type === 'move'){
         return {
             ...action,
-            type: "move"
+            type: "move",
+            dx: -action.dx!,
+            dy: -action.dy!
+        }
+    }
+    else if(action.type === 'resize'){
+        const newShape = action.shapes[0];
+        const original = action.shapes[1];
+        return {
+            ...action,
+            type: "resize",
+            shapes: [original as Shape, newShape as Shape]
         }
     }
     return {

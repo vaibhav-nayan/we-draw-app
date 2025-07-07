@@ -75,7 +75,8 @@ export const getShapes = async (req : Request, res: Response) =>{
                 text: {
                     x: shape.text.x,
                     y: shape.text.y,
-                    text: shape.text.text
+                    text: shape.text.text,
+                    fontSize: shape.text.fontSize
                 }
             }
         }
