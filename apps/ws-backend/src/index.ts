@@ -2,8 +2,10 @@ import { WebSocket, WebSocketServer } from 'ws';
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { JWT_SECRET } from "@repo/backend-common/config"
 import { createNewShape, getManyShapesByIds, getShapeById} from '@repo/db/shapes'
-import { popFromStack, pushToStack, reverseActionType } from './utils/helper';
-import { queueDeleteShapes, queueMoveCircle, queueMoveLine, queueMovePencil, queueMoveRect, queueMoveText, queueUpdateCircle, queueUpdateLine, queueUpdateRect, queueUpdateText } from './jobs/shapeJobs';
+import { popFromStack, pushToStack, reverseActionType } from './utils/helper.js';
+import { queueDeleteShapes, queueMoveCircle, queueMoveLine, queueMovePencil, queueMoveRect, queueMoveText, queueUpdateCircle, queueUpdateLine, queueUpdateRect, queueUpdateText } from './jobs/shapeJobs.js';
+import { connectPubSubsClients, initPubSub, publishToRoom, publishToSystem, setupSubscriber} from "@repo/pubsub";
+import { IncomingMessage } from 'http';
 
 export type Shape = {
     id: number
@@ -142,11 +144,32 @@ async function applyResizeToShape(shapeId: number, shape: Shape) {
     }
 }
 
+const broadCastToRoom = (roomId: string, event: any, senderId?: string) =>{
+    const clients = rooms.get(roomId);
+    if(!clients) return;
+
+    for(const user of clients){
+        if(senderId && user.userId === senderId) continue;
+        if(user.ws.readyState === WebSocket.OPEN){
+            user.ws.send(JSON.stringify(event));
+        }
+    }
+}
+
+
 const users : User[] = [];
+const rooms : Map<string, Set<User>> = new Map();
 
-const wss = new WebSocketServer({port: 8080});
+const start = async () =>{
+    await connectPubSubsClients()
+    setupSubscriber(broadCastToRoom);
+    const wss = new WebSocketServer({port: 8080});
+    wss.on('connection', handleConnection);
+}
 
-wss.on('connection', (ws, request) => {
+start();
+
+async function handleConnection (ws: WebSocket, request: IncomingMessage) {
     const url = request.url;
     if(!url){
         return;
@@ -168,18 +191,60 @@ wss.on('connection', (ws, request) => {
         const parsedData = JSON.parse(data as unknown as string);
 
         if(parsedData.type === "join_room"){
+            const roomId = parsedData.roomId;
             const user = users.find(x => x.ws === ws);
-            user?.rooms.push(parsedData.roomId);
+            if( !user) {
+                return;
+            }
+            if(!user.rooms.includes(roomId)){
+                user.rooms.push(parsedData.roomId);
+            }
+
+            if(!rooms.has(roomId)){
+                rooms.set(roomId, new Set());
+            }
+            rooms.get(roomId)?.add(user);
+
+            await publishToSystem(
+                roomId,
+                {
+                    type: "user_joined",
+                    message: {
+                        userId: userId
+                    }
+                },
+                userId
+            )
+
             undoStack[parsedData.roomId] ||= [];
             redoStack[parsedData.roomId] ||= [];
         }
 
         else if(parsedData.type === "leave_room"){
+            const roomId = parsedData.roomId;
             const user = users.find(x => x.ws === ws);
             if( !user) {
                 return;
             }
-            user.rooms = user?.rooms.filter(x =>x !== parsedData.room)
+            user.rooms = user.rooms.filter(x =>x !== roomId);
+            const roomUsers = rooms.get(roomId);
+            if(roomUsers){
+                roomUsers.delete(user);
+                if(roomUsers.size === 0){
+                    rooms.delete(roomId);
+                }
+            }
+
+            await publishToSystem(
+                roomId,
+                {
+                    type: "user_left",
+                    message: {
+                        userId: userId
+                    }
+                },
+                userId
+            )
         }
 
         else if(parsedData.type === "draw"){
@@ -475,5 +540,44 @@ wss.on('connection', (ws, request) => {
                 }
             })
         }
+
+        const realtimeEvents = [
+            "draw",
+            "delete",
+            "move",
+            "resize",
+            "undo",
+            "redo"
+        ]
+
+        if(realtimeEvents.includes(parsedData.type)){
+            const roomId = parsedData.roomId;
+
+            publishToRoom(roomId, 
+                {
+                    type: parsedData.type,
+                    message: parsedData.message,
+                }, 
+                userId);
+        }
     })
-});
+
+    ws.on("close", () => {
+        const userIndex = users.findIndex(x => x.ws === ws);
+        if(userIndex === -1){
+            return;
+        }
+
+        const user = users[userIndex];
+        if(!user) return;
+        for(const roomId of user?.rooms) {
+            const roomUsers = rooms.get(roomId);
+            if(roomUsers) {
+                roomUsers.delete(user);
+                if(roomUsers.size === 0) rooms.delete(roomId);
+            }
+        }
+
+        users.splice(userIndex, 1);
+    })
+};

@@ -1,4 +1,4 @@
-import { Action, Shape } from "../index";
+import { Action, Shape } from "../index.js";
 
 const MAX_STACK_SIZE = 100;
 
