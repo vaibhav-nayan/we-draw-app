@@ -1,8 +1,9 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { JWT_SECRET } from "@repo/backend-common/config"
-import prisma from '@repo/db/client'
+import { createNewShape, getManyShapesByIds, getShapeById} from '@repo/db/shapes'
 import { popFromStack, pushToStack, reverseActionType } from './utils/helper';
+import { queueDeleteShapes, queueMoveCircle, queueMoveLine, queueMovePencil, queueMoveRect, queueMoveText, queueUpdateCircle, queueUpdateLine, queueUpdateRect, queueUpdateText } from './jobs/shapeJobs';
 
 export type Shape = {
     id: number
@@ -98,139 +99,46 @@ function authorized (url : string) : string | null {
 }
 
 async function applyMoveToShape(shapeId: number, dx: number, dy: number) {
-    const shape = await prisma.shape.findUnique({
-        where: {id: shapeId},
-        include: {
-            rect: true,
-            circle: true,
-            line: true,
-            pencil: {include: {points: true}},
-            text: true
-        }
-    });
+    const shape = await getShapeById(shapeId);
 
     if (!shape) return;
 
     if (shape.type === 'RECT' && shape.rect) {
-        await prisma.shape.update({
-            where: {id: shapeId},
-            data: {
-                rect: {
-                    update: {
-                        x: shape.rect.x + dx,
-                        y: shape.rect.y + dy
-                    }
-                }
-            }
-        })
+        await queueMoveRect(shapeId, dx, dy);
     }
 
     else if (shape.type === 'CIRCLE' && shape.circle) {
-        await prisma.shape.update({
-            where: {id: shapeId},
-            data: {
-                circle: {
-                    update: {
-                        x: shape.circle.x + dx,
-                        y: shape.circle.y + dy
-                    }
-                }
-            }
-        })
+        await queueMoveCircle(shapeId, dx, dy);
     }
 
     else if (shape.type === 'LINE' && shape.line) {
-        await prisma.shape.update({
-            where: {id: shapeId},
-            data: {
-                line: {
-                    update: {
-                        x1: shape.line.x1 + dx,
-                        y1: shape.line.y1 + dy,
-                        x2: shape.line.x2 + dx,
-                        y2: shape.line.y2 + dy
-                    }
-                }
-            }
-        })
+        await queueMoveLine(shapeId, dx, dy);
     }
 
     else if(shape.type === 'PENCIL' && shape.pencil) {
-        const updates = shape.pencil.points.map(point =>
-            prisma.point.update({
-                where: {pointId: point.pointId},
-                data: {
-                    x: point.x + dx,
-                    y: point.y + dy
-                }
-            })
-        )
-        await prisma.$transaction([
-            ...updates
-        ]);
+        await queueMovePencil(shapeId, dx, dy);
     }
 
     else if(shape.type === 'TEXT' && shape.text) {
-        await prisma.shape.update({
-            where: {id: shapeId},
-            data: {
-                text: {
-                    update: {
-                        x: shape.text.x + dx,
-                        y: shape.text.y + dy
-                    }
-                }
-            }
-        })
+        await queueMoveText(shapeId, dx, dy);
     }
 }
 
 async function applyResizeToShape(shapeId: number, shape: Shape) {
     if (shape.type === 'RECT' && shape.rect) {
-        await prisma.rect.update({
-            where: {rectId: shapeId},
-            data: {
-                x: shape.rect.x,
-                y: shape.rect.y,
-                width: shape.rect.width,
-                height: shape.rect.height
-            }
-        })
+        await queueUpdateRect(shapeId, shape);
     }
 
     else if (shape.type === 'CIRCLE' && shape.circle) {
-        await prisma.circle.update({
-            where: {circleId: shapeId},
-            data: {
-                x: shape.circle.x,
-                y: shape.circle.y,
-                radius: shape.circle.radius
-            }
-        })
+        await queueUpdateCircle(shapeId, shape);
     }
 
     else if (shape.type === 'LINE' && shape.line) {
-        await prisma.line.update({
-            where: {lineId: shapeId},
-            data: {
-                x1: shape.line.x1,
-                y1: shape.line.y1,
-                x2: shape.line.x2,
-                y2: shape.line.y2
-            }
-        })
+        await queueUpdateLine(shapeId, shape);
     }
 
     else if(shape.type === 'TEXT' && shape.text) {
-        await prisma.text.update({
-            where: {textId: shapeId},
-            data: {
-                x: shape.text.x,
-                y: shape.text.y,
-                text: shape.text.text,
-                fontSize: shape.text.fontSize
-            }
-        })
+        await queueUpdateText(shapeId, shape);
     }
 }
 
@@ -280,78 +188,7 @@ wss.on('connection', (ws, request) => {
             console.log("Shape Creating Log")
             console.log(shape)
 
-            const newShape = await prisma.shape.create({
-                data: {
-                    userId: userId,
-                    roomId: parseInt(roomId),
-                    type: shape.type,
-                    ...(shape.type === "RECT" && {
-                        rect: {
-                            create: {
-                            x: shape.rect.x,
-                            y: shape.rect.y,
-                            width: shape.rect.width,
-                            height: shape.rect.height
-                            }
-                        }
-                    }),
-                    ...(shape.type === "CIRCLE" && {
-                        circle: {
-                            create: {
-                            x: shape.circle.x,
-                            y: shape.circle.y,
-                            radius: shape.circle.radius
-                            }
-                        }
-                    }),
-                    ...(shape.type === "LINE" && {
-                        line: {
-                            create: {
-                            x1: shape.line.x1,
-                            y1: shape.line.y1,
-                            x2: shape.line.x2,
-                            y2: shape.line.y2
-                            }
-                        }
-                    }),
-                    ...(shape.type === "PENCIL" && {
-                        pencil: {
-                            create: {
-                                points: {
-                                    createMany: {
-                                    data: (shape.pencil.points as {x:number, y:number}[]).map((point, idx) => ({
-                                        x: point.x,
-                                        y: point.y,
-                                        order: idx
-                                    }))
-                                    }
-                                }
-                            }
-                        }
-                    }),
-                    ...(shape.type === "TEXT" && {
-                        text: {
-                            create: {
-                                x: shape.text.x,
-                                y: shape.text.y,
-                                text: shape.text.text,
-                                fontSize: shape.text.fontSize
-                            }
-                        }
-                    })
-                },
-                include: {
-                    rect: true,
-                    circle: true,
-                    line: true,
-                    pencil: {
-                        include  :{
-                            points : true
-                        }
-                    },
-                    text: true
-                }
-            })
+            const newShape = await createNewShape(userId, roomId, shape);
 
             console.log(newShape)
 
@@ -381,34 +218,10 @@ wss.on('connection', (ws, request) => {
 
         else if(parsedData.type === "delete"){
             const roomId = parsedData.roomId;
-            // console.log("on delete logs")
-            // console.log(roomId)
-            // console.log(parsedData)
-            // console.log(parsedData.message)
             const shapeIds = parsedData.message;
-            
-            // console.log(shapeId)
 
             try {
-                // console.log(shapeIds)
-                const shapesToDelete = await prisma.shape.findMany({
-                    where: {
-                        id: {
-                            in: shapeIds
-                        }
-                    },
-                    include: {
-                        rect: true,
-                        circle: true,
-                        line: true,
-                        pencil: {
-                            include  :{
-                                points : true
-                            }
-                        },
-                        text: true
-                    }
-                });
+                const shapesToDelete = await getManyShapesByIds(shapeIds);
 
                 if (!shapesToDelete) {
                     return;
@@ -424,13 +237,9 @@ wss.on('connection', (ws, request) => {
                 console.log("Backend Stacks")
                 console.log(undoStack)
                 console.log(redoStack)
-                await prisma.shape.deleteMany({
-                    where: {
-                        id: {
-                            in: shapeIds
-                        }
-                    }
-                })
+
+
+                await queueDeleteShapes(shapeIds);
 
                 users.forEach(user =>{
                     if(user.ws !== ws && user.rooms.includes(roomId)){
@@ -457,91 +266,14 @@ wss.on('connection', (ws, request) => {
             pushToStack(redoStack, room, reverseActionType(lastAction));
 
             if(lastAction.type === 'draw'){
-                await prisma.shape.deleteMany({
-                    where: {
-                        id: {
-                            in: lastAction.shapes.map(s => s.id!)
-                        }
-                    }
-                })
+                const deleteIds = lastAction.shapes.map(s => s.id!);
+                await queueDeleteShapes(deleteIds);
             }
             else if ( lastAction.type === 'delete') {
                 for (const shape of lastAction.shapes){
                     
                     try {
-                        await prisma.shape.create({
-                            data: {
-                                id: shape.id,
-                                userId: userId,
-                                roomId: parseInt(room),
-                                type: shape.type,
-                                ...(shape.type === "RECT" && {
-                                    rect: {
-                                        create: {
-                                        x: shape.rect.x,
-                                        y: shape.rect.y,
-                                        width: shape.rect.width,
-                                        height: shape.rect.height
-                                        }
-                                    }
-                                }),
-                                ...(shape.type === "CIRCLE" && {
-                                    circle: {
-                                        create: {
-                                        x: shape.circle.x,
-                                        y: shape.circle.y,
-                                        radius: shape.circle.radius
-                                        }
-                                    }
-                                }),
-                                ...(shape.type === "LINE" && {
-                                    line: {
-                                        create: {
-                                        x1: shape.line.x1,
-                                        y1: shape.line.y1,
-                                        x2: shape.line.x2,
-                                        y2: shape.line.y2
-                                        }
-                                    }
-                                }),
-                                ...(shape.type === "PENCIL" && {
-                                    pencil: {
-                                        create: {
-                                            points: {
-                                                createMany: {
-                                                data: (shape.pencil.points as {x:number, y:number}[]).map((point, idx) => ({
-                                                    x: point.x,
-                                                    y: point.y,
-                                                    order: idx
-                                                }))
-                                                }
-                                            }
-                                        }
-                                    }
-                                }),
-                                ...(shape.type === "TEXT" && {
-                                    text: {
-                                        create: {
-                                            x: shape.text.x,
-                                            y: shape.text.y,
-                                            text: shape.text.text,
-                                            fontSize: shape.text.fontSize
-                                        }
-                                    }
-                                })
-                            },
-                            include: {
-                                rect: true,
-                                circle: true,
-                                line: true,
-                                pencil: {
-                                    include  :{
-                                        points : true
-                                    }
-                                },
-                                text: true
-                            }
-                        })
+                        await createNewShape(userId, room, shape);
                     } catch (error) {
                         console.error("Undo error: ", error)
                     }
@@ -549,7 +281,6 @@ wss.on('connection', (ws, request) => {
                 }
             }
             else if (lastAction.type === 'move'){
-                // console.log("received undo move from client")
                 const shapeId = lastAction.shapes[0]?.id;
                 const dx = lastAction.dx;
                 const dy = lastAction.dy;
@@ -566,9 +297,8 @@ wss.on('connection', (ws, request) => {
             else if(lastAction.type === "resize"){
                 const shapeId = lastAction.shapes[0]?.id;
                 const newShape = lastAction.shapes[0];
-                const original = lastAction.shapes[1];
 
-                if (!shapeId || !newShape || !original) return;
+                if (!shapeId || !newShape) return;
 
                 try {
                     await applyResizeToShape(shapeId, newShape);
@@ -579,12 +309,12 @@ wss.on('connection', (ws, request) => {
                 }
             }
             
-            console.log("undo action")
-            console.log(lastAction);
-            console.log("undo Stack Status")
-            console.log(undoStack[room])
-            console.log("redo Stack Status")
-            console.log(redoStack[room])
+            // console.log("undo action")
+            // console.log(lastAction);
+            // console.log("undo Stack Status")
+            // console.log(undoStack[room])
+            // console.log("redo Stack Status")
+            // console.log(redoStack[room])
             users.forEach(user =>{
                 if(user.ws !== ws && user.rooms.includes(room)){
                     user.ws.send(JSON.stringify({
@@ -605,92 +335,17 @@ wss.on('connection', (ws, request) => {
 
             pushToStack(undoStack, room, reverseActionType(redoAction));
 
-            const createdShapes : Shape[] = [];
+            
             if(redoAction.type === 'draw'){
-                await prisma.shape.deleteMany({
-                    where: {
-                        id: {
-                            in: redoAction.shapes.map(s => s.id!)
-                        }
-                    }
-                })
+                const deleteIds = redoAction.shapes.map(s => s.id!);
+                await queueDeleteShapes(deleteIds);
             }
             else if ( redoAction.type === 'delete') {
+                const createdShapes : Shape[] = [];
                 for (const shape of redoAction.shapes){
                     
                     try {
-                        const createdShape = await prisma.shape.create({
-                            data: {
-                                id: shape.id,
-                                userId: userId,
-                                roomId: parseInt(room),
-                                type: shape.type,
-                                ...(shape.type === "RECT" && {
-                                    rect: {
-                                        create: {
-                                        x: shape.rect.x,
-                                        y: shape.rect.y,
-                                        width: shape.rect.width,
-                                        height: shape.rect.height
-                                        }
-                                    }
-                                }),
-                                ...(shape.type === "CIRCLE" && {
-                                    circle: {
-                                        create: {
-                                        x: shape.circle.x,
-                                        y: shape.circle.y,
-                                        radius: shape.circle.radius
-                                        }
-                                    }
-                                }),
-                                ...(shape.type === "LINE" && {
-                                    line: {
-                                        create: {
-                                        x1: shape.line.x1,
-                                        y1: shape.line.y1,
-                                        x2: shape.line.x2,
-                                        y2: shape.line.y2
-                                        }
-                                    }
-                                }),
-                                ...(shape.type === "PENCIL" && {
-                                    pencil: {
-                                        create: {
-                                            points: {
-                                                createMany: {
-                                                data: (shape.pencil.points as {x:number, y:number}[]).map((point, idx) => ({
-                                                    x: point.x,
-                                                    y: point.y,
-                                                    order: idx
-                                                }))
-                                                }
-                                            }
-                                        }
-                                    }
-                                }),
-                                ...(shape.type === "TEXT" && {
-                                    text: {
-                                        create: {
-                                            x: shape.text.x,
-                                            y: shape.text.y,
-                                            text: shape.text.text,
-                                            fontSize: shape.text.fontSize
-                                        }
-                                    }
-                                })
-                            },
-                            include: {
-                                rect: true,
-                                circle: true,
-                                line: true,
-                                pencil: {
-                                    include  :{
-                                        points : true
-                                    }
-                                }
-                            }
-                        })
+                        const createdShape = await createNewShape(userId, room, shape);
 
                         createdShapes.push(createdShape as Shape);
                     } catch (error) {
@@ -713,31 +368,12 @@ wss.on('connection', (ws, request) => {
                 return;
             }
             else if (redoAction.type === 'move'){
-                console.log("redo move called")
+                // console.log("redo move called")
                 const shapeId = redoAction.shapes[0]?.id;
                 const dx = redoAction.dx ?? 0;
                 const dy = redoAction.dy ?? 0;
-                console.log("Action : ", shapeId, dx, dy)
+                // console.log("Action : ", shapeId, dx, dy)
                 if (!shapeId) return;
-                const shape = await prisma.shape.findUnique({
-                    where: {
-                        id: shapeId
-                    },
-                    include: {
-                        rect: true,
-                        circle: true,
-                        line: true,
-                        pencil: {
-                            include  :{
-                                points : true
-                            }
-                        },
-                        text: true
-                    }
-                })
-
-                if (!shape) return;
-                console.log("Before Redo Move Shape : ", shape.rect)
 
                 try {
                     await applyMoveToShape(shapeId, -dx, -dy);
@@ -745,31 +381,13 @@ wss.on('connection', (ws, request) => {
                     console.error("Undo move failed : ", error)
                     return;
                 }
-                const movedShape = await prisma.shape.findUnique({
-                    where: {
-                        id: shapeId
-                    },
-                    include: {
-                        rect: true,
-                        circle: true,
-                        line: true,
-                        pencil: {
-                            include  :{
-                                points : true
-                            }
-                        },
-                        text: true
-                    }
-                })
-                if (!movedShape) return;
-                console.log("After Redo Move Shape : ", movedShape.rect)
+                
             }
             else if (redoAction.type === 'resize'){
                 const shapeId = redoAction.shapes[0]?.id;
                 const newShape = redoAction.shapes[0];
-                const original = redoAction.shapes[1];
 
-                if (!shapeId || !newShape || !original) return;
+                if (!shapeId || !newShape) return;
 
                 try {
                     await applyResizeToShape(shapeId, newShape);
@@ -800,16 +418,7 @@ wss.on('connection', (ws, request) => {
 
             await applyMoveToShape(shapeId, dx, dy);
 
-            const movedShape = await prisma.shape.findUnique({
-                where: {id: shapeId},
-                include: {
-                    rect: true,
-                    circle: true,
-                    line: true,
-                    pencil: {include: {points: true}},
-                    text: true
-                }
-            });
+            const movedShape = await getShapeById(shapeId);
 
             if (!movedShape) return;
 
@@ -842,16 +451,7 @@ wss.on('connection', (ws, request) => {
 
             await applyResizeToShape(shapeId, shape);
 
-            const resizedShape = await prisma.shape.findUnique({
-                where: {id: shapeId},
-                include: {
-                    rect: true,
-                    circle: true,
-                    line: true,
-                    pencil: {include: {points: true}},
-                    text: true
-                }
-            });
+            const resizedShape = await getShapeById(shapeId);
 
             if (!resizedShape) return;
 

@@ -1,6 +1,7 @@
 import { createRoomSchema } from "@repo/common/types";
 import { Request, Response } from "express"
-import prisma from '@repo/db/client'
+import { createNewRoom, getAllRoomsPerUser, getRoomById , getRoomBySlug} from '@repo/db/rooms'
+import { queueDeleteRoom } from "../jobs/roomJobs";
 
 
 export const createRoom = async (req : Request, res: Response) =>{
@@ -15,12 +16,8 @@ export const createRoom = async (req : Request, res: Response) =>{
     }
     const userId = req.userId;
     try {
-        const room = await prisma.room.create({
-            data: {
-                slug : parsedData.data.name,
-                adminId : userId!
-            }
-        })
+        // DB call to create room
+        const room = await createNewRoom(parsedData.data.name, userId!);
 
         res.json({
             room
@@ -36,11 +33,8 @@ export const deleteRoom = async (req : Request, res: Response) =>{
 
     const roomId = req.params.roomId;
     try {
-        await prisma.room.delete({
-            where: {
-                id : parseInt(roomId!)
-            }
-        })
+        // DB call to delete room
+        await queueDeleteRoom(parseInt(roomId!));
 
         res.json({
             message: "Room deleted successfully!!"
@@ -55,13 +49,11 @@ export const deleteRoom = async (req : Request, res: Response) =>{
 
 export const getRooms = async (req : Request, res: Response) =>{
 
+    // Extracting user id
     const userId = req.userId;
     try {
-        const rooms = await prisma.room.findMany({
-            where: {
-                adminId : userId
-            }
-        })
+        // DB call to get all rooms for a user
+        const rooms = await getAllRoomsPerUser(userId!);
 
         res.json({
             rooms
@@ -75,39 +67,48 @@ export const getRooms = async (req : Request, res: Response) =>{
 
 export const getRoom = async (req : Request, res: Response) =>{
 
+    // Extracting Room ID
     const roomId = req.userId;
     try {
-        const rooms = await prisma.room.findMany({
-            where: {
-                id : parseInt(roomId!)
-            }
-        })
+        // DB call to get room by Id
+        const room = await getRoomById(parseInt(roomId!));
 
+        // Sending response
         res.json({
-            rooms
+            room
         })
     } catch (e) {
+        // Sending error
         res.status(411).json({
-            message: "Could not get Rooms"
+            message: "Could not get Room"
         })
     }
 }
 
 export const getRoomId = async (req: Request, res: Response) =>{
 
+    // Extracting Slug
     const slug = req.params.slug;
-    const roomId = await prisma.room.findUnique({
-        where: {
-            slug : slug
-        }
-    })
-    if(!roomId){
+
+    // Checking if slug is empty
+    if(!slug) {
+        res.status(404).json({
+            message: "Room with this name does not exist!!"
+        })
+        return;
+    }
+
+    // DB call to get room ID
+    const room = await getRoomBySlug(slug);
+
+    // Checking if room exists
+    if(!room){
         res.status(404).json({
             message: "Room does not exist!!"
         })
         return;
     }
     res.json({
-        roomId : roomId.id
+        roomId : room.id
     })
 }

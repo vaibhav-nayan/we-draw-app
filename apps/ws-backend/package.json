@@ -16,7 +16,8 @@
     "http": "0.0.1-security",
     "jsonwebtoken": "^9.0.2",
     "ws": "^8.18.2",
-    "@repo/db": "workspace:*"
+    "@repo/db": "workspace:*",
+    "@repo/queue": "workspace:*"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",

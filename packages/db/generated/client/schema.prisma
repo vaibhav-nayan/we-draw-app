@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String  @id @default(uuid())
+  email    String
+  password String
+  name     String
+  avatar   String
+  rooms    Room[]
+  shapes   Shape[]
+}
+
+model Room {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id])
+  shapes    Shape[]
+}
+
+model Shape {
+  id     Int       @id @default(autoincrement())
+  roomId Int
+  type   ShapeType
+  userId String
+  User   User      @relation(fields: [userId], references: [id])
+  room   Room      @relation(fields: [roomId], references: [id])
+
+  rect   Rect?   @relation()
+  circle Circle? @relation()
+  line   Line?   @relation()
+  pencil Pencil? @relation()
+  text   Text?   @relation()
+}
+
+enum ShapeType {
+  RECT
+  CIRCLE
+  LINE
+  PENCIL
+  TEXT
+}
+
+model Rect {
+  rectId Int   @id @default(autoincrement())
+  x      Int
+  y      Int
+  width  Int
+  height Int
+  shape  Shape @relation(fields: [rectId], references: [id], onDelete: Cascade)
+}
+
+model Circle {
+  circleId Int   @id @default(autoincrement())
+  x        Int
+  y        Int
+  radius   Int
+  shape    Shape @relation(fields: [circleId], references: [id], onDelete: Cascade)
+}
+
+model Line {
+  lineId Int   @id @default(autoincrement())
+  x1     Int
+  y1     Int
+  x2     Int
+  y2     Int
+  shape  Shape @relation(fields: [lineId], references: [id], onDelete: Cascade)
+}
+
+model Pencil {
+  pencilShapeId Int     @id @default(autoincrement())
+  points        Point[]
+  shape         Shape   @relation(fields: [pencilShapeId], references: [id], onDelete: Cascade)
+}
+
+model Point {
+  pointId  Int    @id @default(autoincrement())
+  x        Float
+  y        Float
+  order    Int
+  pencilId Int
+  pencil   Pencil @relation(fields: [pencilId], references: [pencilShapeId], onDelete: Cascade)
+}
+
+model Text {
+  textId   Int    @id @default(autoincrement())
+  x        Int
+  y        Int
+  text     String
+  fontSize Float
+  shape    Shape  @relation(fields: [textId], references: [id], onDelete: Cascade)
+}

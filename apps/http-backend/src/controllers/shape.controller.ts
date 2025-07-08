@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import prisma from '@repo/db/client'
+import {getAllShapes} from '@repo/db/shapes'
 
 
 export const getShapes = async (req : Request, res: Response) =>{
@@ -10,20 +10,7 @@ export const getShapes = async (req : Request, res: Response) =>{
             return;
         }
         const roomId = parseInt(req.params.roomId);
-        const rawShapes = await prisma.shape.findMany({
-            where: {
-                roomId : roomId as unknown as number
-            },
-            include: {
-                rect: true,
-                circle: true,
-                line: true,
-                pencil: {
-                    include : {points : true}
-                },
-                text: true
-            }
-        })
+        const rawShapes = await getAllShapes(roomId);
         // console.log(shapes)
         const shapes = rawShapes.map(shape => {
         if (shape.type === "RECT" && shape.rect) {

@@ -1,12 +1,16 @@
 {
   "name": "@repo/db",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "./dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "exports":  {
-    "./client" : "./src/index.ts"
+    "./client" : "./dist/index.js",
+    "./users": "./dist/users/index.js",
+    "./shapes": "./dist/shapes/index.js",
+    "./rooms": "./dist/rooms/index.js"
   },
   "keywords": [],
   "author": "",

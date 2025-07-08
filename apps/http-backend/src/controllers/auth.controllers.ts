@@ -2,11 +2,10 @@ import { Request, Response } from "express"
 import jwt from "jsonwebtoken"
 import { JWT_SECRET } from "@repo/backend-common/config"
 import {CreateUserSchema, SigninSchema} from "@repo/common/types"
-import prisma from "@repo/db/client"
+import { createUser, getUserByEmail } from "@repo/db/users"
 import bcrypt from 'bcrypt'
 
 export const signup = async (req : Request, res: Response) =>{
-    // console.log(req.body)
     const parsedData = CreateUserSchema.safeParse(req.body);
     if(!parsedData.success) {
         res.json({
@@ -14,19 +13,16 @@ export const signup = async (req : Request, res: Response) =>{
         })
         return;
     }
-    // console.log(parsedData)
     try {
         const userPassword = parsedData.data.password;
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(userPassword, salt);
 
-        const user = await prisma.user.create({
-            data: {
-                email : parsedData.data.email,
-                password : hashedPassword,
-                name : parsedData.data.name,
-                avatar: parsedData.data.avatar || ""
-            }
+        const user = await createUser({
+            email : parsedData.data.email,
+            hashedPassword,
+            name : parsedData.data.name,
+            avatar: parsedData.data.avatar || ""
         })
         console.log(user)
         req.userId = user.id;
@@ -49,11 +45,7 @@ export const signin = async (req : Request, res: Response) =>{
         return;
     }
 
-    const user = await prisma.user.findFirst({
-        where: {
-            email : parsedData.data.email,
-        }
-    })
+    const user = await getUserByEmail(parsedData.data.email);
 
     if(!user) {
         res.status(411).json({
