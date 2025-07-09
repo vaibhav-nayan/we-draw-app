@@ -1,5 +1,5 @@
 import { createClient, RedisClientType } from "redis";
-import { REDIS_URL } from '@repo/backend-common/config'
+const REDIS_URL = process.env.REDIS_URL;
 
 export const pub : RedisClientType = createClient({url: REDIS_URL});
 export const sub: RedisClientType = createClient({url: REDIS_URL})

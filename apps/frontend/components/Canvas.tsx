@@ -1,5 +1,4 @@
 "use client"
-import { drawInit } from "@/draw";
 import useSize from "@/hooks/useSize";
 import { useEffect, useRef, useState } from "react";
 import { Square, Circle, Minus, MousePointer2, Hand, Pencil, Eraser, Type } from "lucide-react";

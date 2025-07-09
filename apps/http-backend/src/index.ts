@@ -1,7 +1,7 @@
 import express from 'express';
 import  Router  from './routes/index'
 import cors from 'cors';
-import {PORT, CORS_ORIGIN} from '@repo/backend-common/config'
+import {PORT, CORS_ORIGIN} from './utils/config'
 
 const port = PORT || 8000;
 

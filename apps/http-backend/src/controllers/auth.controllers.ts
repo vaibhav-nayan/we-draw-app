@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import jwt from "jsonwebtoken"
-import { JWT_SECRET } from "@repo/backend-common/config"
+import { JWT_SECRET } from "../utils/config"
 import {CreateUserSchema, SigninSchema} from "@repo/common/types"
 import { createUser, getUserByEmail } from "@repo/db/users"
 import bcrypt from 'bcrypt'

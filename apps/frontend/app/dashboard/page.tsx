@@ -1,5 +1,5 @@
 "use client"
-import { BACKEND_URL } from '@repo/common/config';
+import { BACKEND_URL } from '../../config';
 import axios from 'axios'
 import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";

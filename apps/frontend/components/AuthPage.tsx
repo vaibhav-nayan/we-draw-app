@@ -2,7 +2,7 @@
 import { Input } from "@repo/ui/Input";
 import { useState } from "react";
 import axios from 'axios'
-import { BACKEND_URL } from "@repo/common/config";
+import { BACKEND_URL } from "../config";
 import {SigninSchema, CreateUserSchema} from '@repo/common/types'
 import {redirect} from 'next/navigation'
 

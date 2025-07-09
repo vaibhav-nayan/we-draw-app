@@ -1,11 +1,12 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import jwt, { JwtPayload } from 'jsonwebtoken'
-import { JWT_SECRET } from "@repo/backend-common/config"
+import { JWT_SECRET } from "./utils/config"
 import { createNewShape, getManyShapesByIds, getShapeById} from '@repo/db/shapes'
 import { popFromStack, pushToStack, reverseActionType } from './utils/helper.js';
 import { queueDeleteShapes, queueMoveCircle, queueMoveLine, queueMovePencil, queueMoveRect, queueMoveText, queueUpdateCircle, queueUpdateLine, queueUpdateRect, queueUpdateText } from './jobs/shapeJobs.js';
 import { connectPubSubsClients, initPubSub, publishToRoom, publishToSystem, setupSubscriber} from "@repo/pubsub";
 import { IncomingMessage } from 'http';
+
 
 export type Shape = {
     id: number

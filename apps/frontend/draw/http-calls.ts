@@ -1,4 +1,4 @@
-import { BACKEND_URL } from "@repo/common/config";
+import { BACKEND_URL } from "../config";
 import axios from "axios";
 
 export async function getExistingShapes (roomId : string) {

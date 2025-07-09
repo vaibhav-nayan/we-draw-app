@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import {WS_URL} from '@repo/common/config'
+import {WS_URL} from '../config'
 import { Canvas } from "./Canvas";
 
 export function RoomCanvas ({roomId} : {roomId : string}) {
