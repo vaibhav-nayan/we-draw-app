@@ -9,11 +9,11 @@
     "dev" : "npm run build && npm run start"
   },
   "exports" : {
-    "." : "./src/index.js",
-    "./publisher" : "./src/publisher.js",
-    "./subscriber" : "./src/subscriber.js",
-    "./init" : "./src/initPubSub.js",
-    "./client" : "./src/redisClient.js"
+    "." : "./dist/index.js",
+    "./publisher" : "./dist/publisher.js",
+    "./subscriber" : "./dist/subscriber.js",
+    "./init" : "./dist/initPubSub.js",
+    "./client" : "./dist/redisClient.js"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
