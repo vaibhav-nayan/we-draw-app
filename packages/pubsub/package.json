@@ -10,10 +10,10 @@
   },
   "exports" : {
     "." : "./dist/index.js",
-    "./publisher" : "./dist/publisher.js",
-    "./subscriber" : "./dist/subscriber.js",
-    "./init" : "./dist/initPubSub.js",
-    "./client" : "./dist/redisClient.js"
+    "./publisher" : "./src/publisher.js",
+    "./subscriber" : "./src/subscriber.js",
+    "./init" : "./src/initPubSub.js",
+    "./client" : "./src/redisClient.js"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
