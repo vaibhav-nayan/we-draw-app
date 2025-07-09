@@ -9,6 +9,7 @@ import { publishToRoom, publishToSystem } from '@repo/pubsub/publisher';
 import { setupSubscriber } from '@repo/pubsub/subscriber';
 import { IncomingMessage } from 'http';
 
+const PORT: number = parseInt(process.env.PORT || '8080');
 
 export type Shape = {
     id: number
@@ -168,7 +169,7 @@ const rooms : Map<string, Set<User>> = new Map();
 const start = async () =>{
     await connectPubSubsClients()
     setupSubscriber(broadCastToRoom);
-    const wss = new WebSocketServer({port: 8080});
+    const wss = new WebSocketServer({port: PORT});
     wss.on('connection', handleConnection);
 }
 
