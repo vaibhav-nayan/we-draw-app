@@ -65,7 +65,7 @@ export const signin = async (req : Request, res: Response) =>{
 
     const token = jwt.sign({
         userId : user.id
-    }, JWT_SECRET);
+    }, JWT_SECRET!);
 
     const jwtToken = "Bearer " + token
     req.headers.authorization = jwtToken;

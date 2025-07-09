@@ -51,7 +51,7 @@ export const getShapes = async (req : Request, res: Response) =>{
                 id: shape.id,
                 type : "PENCIL",
                 pencil : {
-                    points : shape.pencil.points
+                    points : shape.pencil.points,
                 }
             }
         }

@@ -1,14 +1,17 @@
 import express from 'express';
 import  Router  from './routes/index'
 import cors from 'cors';
-import {PORT} from '@repo/backend-common/config'
+import {PORT, CORS_ORIGIN} from '@repo/backend-common/config'
 
 const port = PORT || 8000;
 
 const app = express();
 
 app.use(express.json());
-app.use(cors())
+app.use(cors({
+    origin: CORS_ORIGIN,
+    credentials: true
+}))
 app.use('/api', Router);
 
 

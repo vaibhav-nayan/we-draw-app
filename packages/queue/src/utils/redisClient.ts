@@ -1,7 +1,8 @@
 import {createClient, RedisClientType} from 'redis'
+import {REDIS_URL} from '@repo/backend-common/config'
 
 export const queueRedis : RedisClientType = createClient({
-    url : 'redis://localhost:6379'
+    url : REDIS_URL
 })
 
 queueRedis.on('error', (err) => console.log('Redis Client Error: ', err));

@@ -84,6 +84,8 @@ function authorized (url : string) : string | null {
         const queryParams = new URLSearchParams(url.split('?')[1]);
         const token = queryParams.get('token') ?? "";
 
+        if(!JWT_SECRET) return null;
+
         const decoded = jwt.verify(token, JWT_SECRET);
 
         if(typeof decoded === "string"){
