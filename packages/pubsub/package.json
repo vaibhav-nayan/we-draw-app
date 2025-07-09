@@ -16,14 +16,14 @@
     "./client" : "./dist/redisClient.js"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*"
+    "@repo/typescript-config": "workspace:*",
+    "@repo/backend-common": "workspace:*"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "redis": "^5.5.6",
-    "@repo/backend-common": "workspace:*"
+    "redis": "^5.5.6"
   }
 }
