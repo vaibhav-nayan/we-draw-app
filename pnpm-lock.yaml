@@ -26,6 +26,9 @@ importers:
       crypto:
         specifier: ^1.0.1
         version: 1.0.1
+      dotenv:
+        specifier: ^16.5.0
+        version: 16.5.0
       lucide-react:
         specifier: ^0.522.0
         version: 0.522.0(react@19.1.0)
@@ -127,6 +130,9 @@ importers:
       '@repo/queue':
         specifier: workspace:*
         version: link:../../packages/queue
+      dotenv:
+        specifier: ^16.5.0
+        version: 16.5.0
       http:
         specifier: 0.0.1-security
         version: 0.0.1-security
