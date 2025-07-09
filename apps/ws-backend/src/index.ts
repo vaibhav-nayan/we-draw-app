@@ -8,6 +8,9 @@ import { connectPubSubsClients} from "@repo/pubsub/client";
 import { publishToRoom, publishToSystem } from '@repo/pubsub/publisher';
 import { setupSubscriber } from '@repo/pubsub/subscriber';
 import { IncomingMessage } from 'http';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const PORT: number = parseInt(process.env.PORT || '8080');
 

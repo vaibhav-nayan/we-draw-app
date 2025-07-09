@@ -15,6 +15,7 @@
     "@repo/db": "workspace:*",
     "@repo/pubsub": "workspace:*",
     "@repo/queue": "workspace:*",
+    "dotenv": "^16.5.0",
     "http": "0.0.1-security",
     "jsonwebtoken": "^9.0.2",
     "ts-node": "^10.9.2",
