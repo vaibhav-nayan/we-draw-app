@@ -1,7 +1,8 @@
 import {createClient, RedisClientType} from 'redis'
+const url = process.env.ENV === 'production' ? process.env.REDIS_URL : 'redis://localhost:6379';
 
 export const queueRedis : RedisClientType = createClient({
-    url : process.env.REDIS_URL
+    url : url
 })
 
 queueRedis.on('error', (err) => console.log('Redis Client Error: ', err));
