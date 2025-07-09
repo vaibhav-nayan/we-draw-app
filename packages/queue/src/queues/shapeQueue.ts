@@ -1,7 +1,9 @@
 import {Queue} from 'bullmq'
+import dotenv from "dotenv";
+dotenv.config();
 
 export const shapeQueue = new Queue('shapeQueue', {
     connection: {
-        url: 'redis://localhost:6379'
+        url: process.env.REDIS_URL
     }
 })

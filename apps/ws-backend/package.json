@@ -12,18 +12,19 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@repo/db": "workspace:*",
+    "@repo/pubsub": "workspace:*",
+    "@repo/queue": "workspace:*",
     "http": "0.0.1-security",
     "jsonwebtoken": "^9.0.2",
-    "ws": "^8.18.2",
-    "@repo/db": "workspace:*",
-    "@repo/queue": "workspace:*",
-    "@repo/pubsub" : "workspace:*"
+    "ts-node": "^10.9.2",
+    "ws": "^8.18.2"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.10",
-    "@repo/typescript-config": "workspace:*",
-    "@types/ws": "^8.18.1",
     "@repo/backend-common": "workspace:*",
-    "@repo/common": "workspace:*"
+    "@repo/common": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/ws": "^8.18.1"
   }
 }

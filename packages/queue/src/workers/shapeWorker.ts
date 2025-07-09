@@ -1,9 +1,11 @@
 import {Worker, Job} from 'bullmq'
 import { ShapeJobPayload } from '../producers/shapeProducer.js'
 import {deleteManyShapes, updateCircleByShape, updateLineByShape, updatePositionCircle, updatePositionLine, updatePositionPencil, updatePositionRectangle, updatePositionText, updateRectByShape, updateTextByShape } from '@repo/db/shapes';
+import dotenv from "dotenv";
+dotenv.config();
 
 const connection = {
-    url: 'redis://localhost:6379'
+    url: process.env.REDIS_URL
 }
 
 const shapeWorker = new Worker<ShapeJobPayload> (

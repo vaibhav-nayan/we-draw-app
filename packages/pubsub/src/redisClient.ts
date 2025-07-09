@@ -1,15 +1,19 @@
 import { createClient, RedisClientType } from "redis";
 import dotenv from "dotenv";
 dotenv.config();
-const url = process.env.REDIS_URL;
+// const url = process.env.REDIS_URL;
 
-console.log("Redis URL: ", url);
-if (!process.env.REDIS_URL) {
-  throw new Error("Missing REDIS_URL environment variable");
-}
+// console.log("Redis URL: ", process.env.REDIS_URL);
+// if (!process.env.REDIS_URL) {
+//   throw new Error("Missing REDIS_URL environment variable");
+// }
 
-export const pub : RedisClientType = createClient({url: url});
-export const sub: RedisClientType = createClient({url: url})
+export const pub : RedisClientType = createClient({
+    url: process.env.REDIS_URL
+});
+export const sub: RedisClientType = createClient({
+    url: process.env.REDIS_URL
+})
 
 pub.on('error', (err) => console.error('Pub Redis error: ', err));
 sub.on('error', (err) => console.error('Sub Redis error: ', err));

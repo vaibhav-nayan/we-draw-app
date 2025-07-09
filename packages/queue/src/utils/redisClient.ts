@@ -3,15 +3,15 @@ import {createClient, RedisClientType} from 'redis'
 import dotenv from "dotenv";
 dotenv.config();
 
-const url = process.env.REDIS_URL;
+// const url = process.env.REDIS_URL;
 
-console.log("Redis URL: ", url);
-if (!process.env.REDIS_URL) {
-  throw new Error("Missing REDIS_URL environment variable");
-}
+// console.log("Redis URL: ", process.env.REDIS_URL);
+// if (!process.env.REDIS_URL) {
+//   throw new Error("Missing REDIS_URL environment variable");
+// }
 
 export const queueRedis : RedisClientType = createClient({
-    url : url
+    url : process.env.REDIS_URL
 })
 
 queueRedis.on('error', (err) => console.log('Redis Client Error: ', err));

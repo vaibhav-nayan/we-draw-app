@@ -1,9 +1,11 @@
 import { Worker, Job } from "bullmq";
 import { RoomJobPayload } from "../producers/roomProducer.js";
 import {deleteRoomById} from "@repo/db/rooms";
+import dotenv from "dotenv";
+dotenv.config();
 
 const connection = {
-    url: 'redis://localhost:6379'
+    url: process.env.REDIS_URL
 }
 
 const roomWorker = new Worker(
