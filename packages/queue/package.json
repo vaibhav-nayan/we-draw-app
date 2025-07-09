@@ -4,27 +4,28 @@
   "type": "commonjs",
   "main": "./dist/index.js",
   "scripts": {
-    "build" : "tsc -b",
-    "start" : "node dist/startWorkers.js",
-    "dev" : "npm run build && npm run start"
+    "build": "tsc -b",
+    "start": "node dist/startWorkers.js",
+    "dev": "npm run build && npm run start"
   },
-  "exports" : {
-    "./producers/*" : "./dist/producers/*.js",
-    "./queues/*" : "./dist/queues/*.js",
-    "./workers/*" : "./dist/workers/*.js"
+  "exports": {
+    "./producers/*": "./dist/producers/*.js",
+    "./queues/*": "./dist/queues/*.js",
+    "./workers/*": "./dist/workers/*.js"
   },
   "devDependencies": {
+    "@repo/backend-common": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/redis": "^4.0.11",
-    "redis": "^5.5.6",
-    "@repo/backend-common": "workspace:*"
+    "redis": "^5.5.6"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@repo/db": "workspace:*",
     "bullmq": "^5.56.1",
-    "@repo/db" : "workspace:*"
+    "dotenv": "^16.5.0"
   }
 }
