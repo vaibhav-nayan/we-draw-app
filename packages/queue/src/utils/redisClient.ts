@@ -6,4 +6,10 @@ export const queueRedis : RedisClientType = createClient({
 
 queueRedis.on('error', (err) => console.log('Redis Client Error: ', err));
 
-await queueRedis.connect();
+(async () => {
+  try {
+    await queueRedis.connect();
+  } catch (err) {
+    console.error("Failed to connect to Redis:", err);
+  }
+})();

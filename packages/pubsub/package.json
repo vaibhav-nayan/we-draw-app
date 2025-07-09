@@ -1,7 +1,7 @@
 {
   "name": "@repo/pubsub",
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
   "main": "index.js",
   "scripts": {
     "build" : "tsc -b",
@@ -9,7 +9,7 @@
     "dev" : "npm run build && npm run start"
   },
   "exports" : {
-    "." : "./dist/index.js",
+    "." : "./src/index.js",
     "./publisher" : "./src/publisher.js",
     "./subscriber" : "./src/subscriber.js",
     "./init" : "./src/initPubSub.js",
