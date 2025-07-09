@@ -2,6 +2,9 @@ import express from 'express';
 import  Router  from './routes/index'
 import cors from 'cors';
 import {PORT, CORS_ORIGIN} from './utils/config'
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const port = PORT || 8000;
 
